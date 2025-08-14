@@ -11,6 +11,7 @@ const Navigation = () => {
   const navItems = [
     { path: "/", label: "Home", icon: "fas fa-home" },
     { path: "/upload", label: "Upload", icon: "fas fa-upload" },
+    { path: "/photo-extract", label: "Photo Extract", icon: "fas fa-camera" },
     { path: "/extract", label: "Extract Text", icon: "fas fa-magic" },
     { path: "/history", label: "History", icon: "fas fa-history" },
     { path: "/settings", label: "Settings", icon: "fas fa-cog" },

@@ -15,12 +15,20 @@ const Home = () => {
           Perfect for documents, screenshots, handwritten notes, and more.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link href="/photo-extract">
+            <button 
+              data-testid="button-extract-photo"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+            >
+              <i className="fas fa-camera mr-2"></i>Extract from Photo
+            </button>
+          </Link>
           <Link href="/upload">
             <button 
               data-testid="button-start-extracting"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+              className="border border-slate-300 hover:border-blue-600 text-slate-700 hover:text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
             >
-              <i className="fas fa-upload mr-2"></i>Start Extracting
+              <i className="fas fa-upload mr-2"></i>Upload Documents
             </button>
           </Link>
           <Link href="/premium">

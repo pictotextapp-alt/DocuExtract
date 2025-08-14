@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Navigation from "@/components/navigation";
 import Home from "@/pages/home";
 import Upload from "@/pages/upload";
+import PhotoExtract from "@/pages/photo-extract";
 import Extract from "@/pages/extract";
 import History from "@/pages/history";
 import Settings from "@/pages/settings";
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/upload" component={Upload} />
+      <Route path="/photo-extract" component={PhotoExtract} />
       <Route path="/extract" component={Extract} />
       <Route path="/history" component={History} />
       <Route path="/settings" component={Settings} />
