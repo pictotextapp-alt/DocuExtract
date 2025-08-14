@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import type { OCRRequest, OCRResponse } from "@shared/schema";
+import InteractiveTextOverlay from "./interactive-text-overlay";
+import type { OCRRequest, OCRResponse, TextRegion } from "@shared/schema";
 
 const PhotoExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [extractedText, setExtractedText] = useState("");
+  const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [showInteractiveMode, setShowInteractiveMode] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,13 +38,25 @@ const PhotoExtractor = () => {
     onSuccess: (data: OCRResponse) => {
       if (data.success) {
         setExtractedText(data.text);
+        setTextRegions(data.textRegions || []);
         setConfidence(data.confidence);
         setWordCount(data.words);
         setShowResult(true);
-        toast({
-          title: "Text extraction complete",
-          description: `Successfully extracted ${data.words} words from your image.`,
-        });
+        
+        // Enable interactive mode if we have text regions with coordinates
+        if (data.textRegions && data.textRegions.length > 0) {
+          setShowInteractiveMode(true);
+          toast({
+            title: "Interactive text extraction complete",
+            description: `Successfully extracted ${data.words} words with ${data.textRegions.length} editable regions.`,
+          });
+        } else {
+          setShowInteractiveMode(false);
+          toast({
+            title: "Text extraction complete",
+            description: `Successfully extracted ${data.words} words from your image.`,
+          });
+        }
       } else {
         toast({
           title: "Extraction failed",
@@ -88,6 +103,8 @@ const PhotoExtractor = () => {
     setSelectedImage(file);
     setShowResult(false);
     setExtractedText("");
+    setTextRegions([]);
+    setShowInteractiveMode(false);
 
     // Create optimized preview
     const reader = new FileReader();
@@ -125,6 +142,26 @@ const PhotoExtractor = () => {
     img.src = originalDataUrl;
   };
 
+  const handleTextRegionsChange = (regions: TextRegion[]) => {
+    setTextRegions(regions);
+  };
+
+  const handleGenerateFinalText = () => {
+    // Generate final text from visible regions only
+    const visibleRegions = textRegions
+      .filter(region => region.isVisible)
+      .sort((a, b) => a.y - b.y || a.x - b.x); // Sort by position (top to bottom, left to right)
+    
+    const finalText = visibleRegions.map(region => region.text).join(' ');
+    setExtractedText(finalText);
+    setWordCount(finalText.trim() ? finalText.trim().split(/\s+/).length : 0);
+    
+    toast({
+      title: "Final text generated",
+      description: `Combined ${visibleRegions.length} visible regions into final text.`,
+    });
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
@@ -153,7 +190,9 @@ const PhotoExtractor = () => {
     setSelectedImage(null);
     setImagePreview("");
     setExtractedText("");
+    setTextRegions([]);
     setShowResult(false);
+    setShowInteractiveMode(false);
     setConfidence(0);
     setWordCount(0);
     if (fileInputRef.current) {
@@ -280,38 +319,128 @@ const PhotoExtractor = () => {
 
       {/* Results View */}
       {showResult && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Original Image */}
-          <Card>
+        <div className="space-y-6">
+          {/* Interactive Text Overlay Mode */}
+          {showInteractiveMode && textRegions.length > 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    <i className="fas fa-edit text-blue-600 mr-2"></i>Interactive Text Editor
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearImage}
+                    data-testid="button-start-over"
+                  >
+                    <i className="fas fa-plus mr-2"></i>Upload New
+                  </Button>
+                </div>
+                <InteractiveTextOverlay
+                  imageUrl={imagePreview}
+                  textRegions={textRegions}
+                  onTextRegionsChange={handleTextRegionsChange}
+                  onGenerateFinalText={handleGenerateFinalText}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            /* Original Simple Mode */
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      <i className="fas fa-image text-blue-600 mr-2"></i>Original Image
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearImage}
+                      data-testid="button-start-over"
+                    >
+                      <i className="fas fa-plus mr-2"></i>Upload New
+                    </Button>
+                  </div>
+                  <div className="bg-slate-100 rounded-lg p-4 flex items-center justify-center">
+                    <img
+                      src={imagePreview}
+                      alt="Original image"
+                      className="max-w-full max-h-96 object-contain rounded-lg shadow-md"
+                      data-testid="original-image"
+                    />
+                  </div>
+                  <div className="mt-4 text-sm text-slate-600 text-center">
+                    {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Extracted Text */}
+              <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-slate-900">
-                  <i className="fas fa-image text-blue-600 mr-2"></i>Original Image
+                  <i className="fas fa-file-text text-green-600 mr-2"></i>Extracted Text
                 </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearImage}
-                  data-testid="button-start-over"
-                >
-                  <i className="fas fa-plus mr-2"></i>Upload New
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    disabled={!extractedText}
+                    data-testid="button-copy-text"
+                  >
+                    <i className="fas fa-copy"></i>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const element = document.createElement("a");
+                      const file = new Blob([extractedText], { type: 'text/plain' });
+                      element.href = URL.createObjectURL(file);
+                      element.download = "extracted_text.txt";
+                      document.body.appendChild(element);
+                      element.click();
+                      document.body.removeChild(element);
+                    }}
+                    disabled={!extractedText}
+                    data-testid="button-download-text"
+                  >
+                    <i className="fas fa-download"></i>
+                  </Button>
+                </div>
               </div>
-              <div className="bg-slate-100 rounded-lg p-4 flex items-center justify-center">
-                <img
-                  src={imagePreview}
-                  alt="Original image"
-                  className="max-w-full max-h-96 object-contain rounded-lg shadow-md"
-                  data-testid="original-image"
-                />
-              </div>
-              <div className="mt-4 text-sm text-slate-600 text-center">
-                {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+              <Textarea
+                className="min-h-96 resize-none font-mono"
+                placeholder="Extracted text will appear here..."
+                value={extractedText}
+                onChange={(e) => setExtractedText(e.target.value)}
+                data-testid="extracted-text-output"
+              />
+              <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between text-sm text-green-800 mb-2">
+                  <span className="flex items-center">
+                    <i className="fas fa-check-circle mr-2"></i>
+                    Text extraction completed successfully
+                  </span>
+                  <span className="font-semibold">{wordCount} words</span>
+                </div>
+                {confidence > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-700">
+                    <span>Confidence Score</span>
+                    <span className="font-semibold">{confidence.toFixed(1)}%</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+            </div>
+          )}
 
-          {/* Extracted Text */}
+          {/* Extracted Text - Always show when results are available */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">

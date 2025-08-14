@@ -24,13 +24,26 @@ export const ocrRequestSchema = z.object({
   isTable: z.boolean().optional().default(false),
 });
 
+export const textRegionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  confidence: z.number(),
+  isVisible: z.boolean().default(true),
+});
+
 export const ocrResponseSchema = z.object({
   text: z.string(),
   confidence: z.number(),
   words: z.number(),
   success: z.boolean(),
   error: z.string().optional(),
+  textRegions: z.array(textRegionSchema).optional(),
 });
 
 export type OCRRequest = z.infer<typeof ocrRequestSchema>;
 export type OCRResponse = z.infer<typeof ocrResponseSchema>;
+export type TextRegion = z.infer<typeof textRegionSchema>;
