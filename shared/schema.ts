@@ -27,12 +27,15 @@ export const ocrRequestSchema = z.object({
 export const textRegionSchema = z.object({
   id: z.string(),
   text: z.string(),
+  originalText: z.string(),
   x: z.number(),
   y: z.number(),
   width: z.number(),
   height: z.number(),
   confidence: z.number(),
   isVisible: z.boolean().default(true),
+  isDeleted: z.boolean().default(false),
+  isEdited: z.boolean().default(false),
 });
 
 export const ocrResponseSchema = z.object({
@@ -44,6 +47,19 @@ export const ocrResponseSchema = z.object({
   textRegions: z.array(textRegionSchema).optional(),
 });
 
+export const imageEditRequestSchema = z.object({
+  originalImage: z.string().min(1, "Original image data is required"),
+  textRegions: z.array(textRegionSchema),
+});
+
+export const imageEditResponseSchema = z.object({
+  modifiedImage: z.string(),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+
 export type OCRRequest = z.infer<typeof ocrRequestSchema>;
 export type OCRResponse = z.infer<typeof ocrResponseSchema>;
 export type TextRegion = z.infer<typeof textRegionSchema>;
+export type ImageEditRequest = z.infer<typeof imageEditRequestSchema>;
+export type ImageEditResponse = z.infer<typeof imageEditResponseSchema>;

@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import InteractiveTextOverlay from "./interactive-text-overlay";
-import type { OCRRequest, OCRResponse, TextRegion } from "@shared/schema";
+import type { OCRRequest, OCRResponse, TextRegion, ImageEditRequest, ImageEditResponse } from "@shared/schema";
 
 const PhotoExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -17,6 +17,7 @@ const PhotoExtractor = () => {
   const [showFinalText, setShowFinalText] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
+  const [modifiedImageUrl, setModifiedImageUrl] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -76,6 +77,47 @@ const PhotoExtractor = () => {
     },
   });
 
+  const editImageMutation = useMutation({
+    mutationFn: async (imageEditRequest: ImageEditRequest): Promise<ImageEditResponse> => {
+      const response = await fetch("/api/edit-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(imageEditRequest),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data: ImageEditResponse) => {
+      if (data.success) {
+        setModifiedImageUrl(data.modifiedImage);
+        toast({
+          title: "Image processing complete",
+          description: "Your changes have been applied to the original image.",
+        });
+      } else {
+        toast({
+          title: "Image processing failed",
+          description: data.error || "Failed to apply changes to the image.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Processing error",
+        description: "An error occurred while processing your image. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Image processing error:", error);
+    },
+  });
+
   const handleFileSelect = (file: File | null) => {
     if (!file) return;
 
@@ -107,6 +149,7 @@ const PhotoExtractor = () => {
     setTextRegions([]);
     setShowInteractiveMode(false);
     setShowFinalText(false);
+    setModifiedImageUrl("");
 
     // Create optimized preview
     const reader = new FileReader();
@@ -148,21 +191,33 @@ const PhotoExtractor = () => {
     setTextRegions(regions);
   };
 
-  const handleGenerateFinalText = () => {
-    // Generate final text from visible regions only
-    const visibleRegions = textRegions
-      .filter(region => region.isVisible)
-      .sort((a, b) => a.y - b.y || a.x - b.x); // Sort by position (top to bottom, left to right)
+  const handleApplyChanges = () => {
+    if (!imagePreview) {
+      toast({
+        title: "No image selected",
+        description: "Please select an image first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const changedRegions = textRegions.filter(region => region.isDeleted || region.isEdited);
     
-    const finalText = visibleRegions.map(region => region.text).join(' ');
-    setExtractedText(finalText);
-    setWordCount(finalText.trim() ? finalText.trim().split(/\s+/).length : 0);
-    setShowFinalText(true);
-    
-    toast({
-      title: "Final text generated",
-      description: `Combined ${visibleRegions.length} visible regions. Text displayed on image.`,
-    });
+    if (changedRegions.length === 0) {
+      toast({
+        title: "No changes to apply",
+        description: "Please edit or delete some text regions first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const imageEditRequest: ImageEditRequest = {
+      originalImage: imagePreview,
+      textRegions: textRegions,
+    };
+
+    editImageMutation.mutate(imageEditRequest);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -199,6 +254,7 @@ const PhotoExtractor = () => {
     setShowFinalText(false);
     setConfidence(0);
     setWordCount(0);
+    setModifiedImageUrl("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -345,9 +401,9 @@ const PhotoExtractor = () => {
                   imageUrl={imagePreview}
                   textRegions={textRegions}
                   onTextRegionsChange={handleTextRegionsChange}
-                  onGenerateFinalText={handleGenerateFinalText}
-                  finalText={extractedText}
-                  showFinalText={showFinalText}
+                  onApplyChanges={handleApplyChanges}
+                  modifiedImageUrl={modifiedImageUrl}
+                  isProcessing={editImageMutation.isPending}
                 />
               </CardContent>
             </Card>

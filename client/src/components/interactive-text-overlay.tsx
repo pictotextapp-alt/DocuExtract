@@ -7,18 +7,18 @@ interface InteractiveTextOverlayProps {
   imageUrl: string;
   textRegions: TextRegion[];
   onTextRegionsChange: (regions: TextRegion[]) => void;
-  onGenerateFinalText: () => void;
-  finalText?: string;
-  showFinalText?: boolean;
+  onApplyChanges: () => void;
+  modifiedImageUrl?: string;
+  isProcessing?: boolean;
 }
 
 const InteractiveTextOverlay = ({ 
   imageUrl, 
   textRegions, 
   onTextRegionsChange,
-  onGenerateFinalText,
-  finalText = "",
-  showFinalText = false
+  onApplyChanges,
+  modifiedImageUrl,
+  isProcessing = false
 }: InteractiveTextOverlayProps) => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [editingRegion, setEditingRegion] = useState<string | null>(null);
@@ -75,7 +75,13 @@ const InteractiveTextOverlay = ({
 
   const handleTextSave = (regionId: string) => {
     const updatedRegions = textRegions.map(region =>
-      region.id === regionId ? { ...region, text: tempText } : region
+      region.id === regionId 
+        ? { 
+            ...region, 
+            text: tempText, 
+            isEdited: tempText !== region.originalText 
+          } 
+        : region
     );
     onTextRegionsChange(updatedRegions);
     setEditingRegion(null);
@@ -95,7 +101,9 @@ const InteractiveTextOverlay = ({
   };
 
   const handleRegionDelete = (regionId: string) => {
-    const updatedRegions = textRegions.filter(region => region.id !== regionId);
+    const updatedRegions = textRegions.map(region =>
+      region.id === regionId ? { ...region, isDeleted: true, isVisible: false } : region
+    );
     onTextRegionsChange(updatedRegions);
     setSelectedRegion(null);
     setEditingRegion(null);
@@ -137,6 +145,10 @@ const InteractiveTextOverlay = ({
                   ? 'border-blue-600 bg-blue-200 bg-opacity-70 shadow-lg'
                   : editingRegion === region.id
                   ? 'border-orange-500 bg-orange-100 bg-opacity-50'
+                  : region.isDeleted
+                  ? 'border-red-600 bg-red-200 bg-opacity-80 opacity-60'
+                  : region.isEdited
+                  ? 'border-yellow-500 bg-yellow-100 bg-opacity-60 hover:bg-yellow-200'
                   : region.isVisible 
                   ? 'border-green-500 bg-green-100 bg-opacity-40 hover:bg-green-200 hover:bg-opacity-60'
                   : 'border-red-500 bg-red-100 bg-opacity-40 opacity-50'
@@ -210,13 +222,13 @@ const InteractiveTextOverlay = ({
           </div>
         ))}
 
-        {/* Final extracted text overlay */}
-        {showFinalText && finalText && (
+        {/* Modified image overlay */}
+        {modifiedImageUrl && (
           <div className="absolute top-0 right-0 m-4 max-w-md bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-lg border-2 border-green-500">
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-green-700 text-sm">
-                  <i className="fas fa-check-circle mr-2"></i>Final Extracted Text
+                  <i className="fas fa-check-circle mr-2"></i>Modified Image
                 </h4>
                 <div className="flex gap-1">
                   <Button
@@ -224,36 +236,26 @@ const InteractiveTextOverlay = ({
                     variant="ghost"
                     className="h-6 w-6 p-1"
                     onClick={() => {
-                      navigator.clipboard.writeText(finalText);
-                    }}
-                    data-testid="copy-final-text"
-                  >
-                    <i className="fas fa-copy text-xs"></i>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-1"
-                    onClick={() => {
                       const element = document.createElement("a");
-                      const file = new Blob([finalText], { type: 'text/plain' });
-                      element.href = URL.createObjectURL(file);
-                      element.download = "extracted_text.txt";
+                      element.href = modifiedImageUrl;
+                      element.download = "modified_image.jpg";
                       document.body.appendChild(element);
                       element.click();
                       document.body.removeChild(element);
                     }}
-                    data-testid="download-final-text"
+                    data-testid="download-modified-image"
                   >
                     <i className="fas fa-download text-xs"></i>
                   </Button>
                 </div>
               </div>
-              <div className="bg-green-50 rounded p-3 text-sm font-mono text-green-900 whitespace-pre-wrap">
-                {finalText}
-              </div>
+              <img 
+                src={modifiedImageUrl} 
+                alt="Modified image" 
+                className="w-full rounded border"
+              />
               <div className="mt-2 text-xs text-green-600 text-center">
-                {finalText.trim().split(/\s+/).length} words extracted
+                Changes applied to original image
               </div>
             </div>
           </div>
@@ -268,12 +270,22 @@ const InteractiveTextOverlay = ({
             Interactive Text Editor
           </h3>
           <Button 
-            onClick={onGenerateFinalText}
-            className="bg-green-600 hover:bg-green-700"
-            data-testid="generate-final-text"
+            onClick={onApplyChanges}
+            disabled={isProcessing}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            data-testid="apply-changes-button"
           >
-            <i className="fas fa-check mr-2"></i>
-            Generate Final Text
+            {isProcessing ? (
+              <>
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Processing Image...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-magic mr-2"></i>
+                Apply Changes to Image
+              </>
+            )}
           </Button>
         </div>
         
@@ -283,16 +295,17 @@ const InteractiveTextOverlay = ({
               <strong>Instructions:</strong>
               <ul className="mt-1 space-y-1">
                 <li>• <strong>Click once</strong> to select a text region</li>
-                <li>• <strong>Click again</strong> on selected region to edit</li>
-                <li>• <strong>Delete:</strong> Use red delete button below</li>
-                <li>• <strong>Click outside</strong> to deselect</li>
+                <li>• <strong>Click again</strong> on selected region to edit text</li>
+                <li>• <strong>Delete:</strong> Remove text completely from image</li>
+                <li>• <strong>Apply Changes:</strong> Process image with modifications</li>
               </ul>
             </div>
             <div>
               <strong>Legend:</strong>
               <ul className="mt-1 space-y-1">
-                <li><span className="inline-block w-3 h-3 bg-green-200 border border-green-500 mr-2"></span>Visible text</li>
-                <li><span className="inline-block w-3 h-3 bg-red-200 border border-red-500 mr-2"></span>Hidden text</li>
+                <li><span className="inline-block w-3 h-3 bg-green-200 border border-green-500 mr-2"></span>Original text</li>
+                <li><span className="inline-block w-3 h-3 bg-yellow-200 border border-yellow-500 mr-2"></span>Edited text</li>
+                <li><span className="inline-block w-3 h-3 bg-red-200 border border-red-600 mr-2"></span>Deleted text</li>
                 <li><span className="inline-block w-3 h-3 bg-blue-200 border border-blue-500 mr-2"></span>Selected</li>
               </ul>
             </div>
@@ -300,8 +313,9 @@ const InteractiveTextOverlay = ({
               <strong>Stats:</strong>
               <ul className="mt-1 space-y-1">
                 <li>Total regions: {textRegions.length}</li>
-                <li>Visible: {textRegions.filter(r => r.isVisible).length}</li>
-                <li>Hidden: {textRegions.filter(r => !r.isVisible).length}</li>
+                <li>Original: {textRegions.filter(r => !r.isEdited && !r.isDeleted).length}</li>
+                <li>Edited: {textRegions.filter(r => r.isEdited && !r.isDeleted).length}</li>
+                <li>Deleted: {textRegions.filter(r => r.isDeleted).length}</li>
               </ul>
             </div>
           </div>
