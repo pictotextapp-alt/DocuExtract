@@ -3,15 +3,62 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import type { OCRRequest, OCRResponse } from "@shared/schema";
 
 const PhotoExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [isExtracting, setIsExtracting] = useState(false);
   const [extractedText, setExtractedText] = useState("");
   const [showResult, setShowResult] = useState(false);
+  const [confidence, setConfidence] = useState(0);
+  const [wordCount, setWordCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const extractTextMutation = useMutation({
+    mutationFn: async (ocrRequest: OCRRequest): Promise<OCRResponse> => {
+      const response = await fetch("/api/extract-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(ocrRequest),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data: OCRResponse) => {
+      if (data.success) {
+        setExtractedText(data.text);
+        setConfidence(data.confidence);
+        setWordCount(data.words);
+        setShowResult(true);
+        toast({
+          title: "Text extraction complete",
+          description: `Successfully extracted ${data.words} words from your image.`,
+        });
+      } else {
+        toast({
+          title: "Extraction failed",
+          description: data.error || "Failed to extract text from the image.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Extraction error",
+        description: "An error occurred while processing your image. Please try again.",
+        variant: "destructive",
+      });
+      console.error("OCR extraction error:", error);
+    },
+  });
 
   const handleFileSelect = (file: File | null) => {
     if (!file) return;
@@ -65,31 +112,15 @@ const PhotoExtractor = () => {
   };
 
   const handleExtractText = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !imagePreview) return;
 
-    setIsExtracting(true);
-    
-    // Simulate OCR processing
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    // Simulate extracted text based on common image content
-    const sampleTexts = [
-      "Invoice #INV-2024-001\nDate: January 15, 2024\nBill To: John Smith\n123 Main Street\nAnytown, ST 12345\n\nItem: Professional Services\nQuantity: 1\nUnit Price: $500.00\nTotal: $500.00\n\nThank you for your business!",
-      
-      "Meeting Notes - Project Alpha\nDate: January 15, 2024\nAttendees: Sarah, Mike, Jennifer\n\nAction Items:\n• Complete design mockups by Friday\n• Review budget allocation\n• Schedule client presentation\n• Update project timeline\n\nNext meeting: January 22, 2024",
-      
-      "Receipt\nTech Electronics Store\n456 Commerce Ave\nPhone: (555) 123-4567\n\nPurchase Date: 01/15/2024\nTransaction #: T2024-15678\n\nItems:\nWireless Headphones - $89.99\nUSB Cable - $12.99\nSubtotal: $102.98\nTax: $8.24\nTotal: $111.22\n\nPayment: Credit Card ****1234\nThank you for shopping with us!"
-    ];
-    
-    const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
-    setExtractedText(randomText);
-    setShowResult(true);
-    setIsExtracting(false);
-    
-    toast({
-      title: "Text extraction complete",
-      description: "The text has been successfully extracted from your image.",
-    });
+    const ocrRequest: OCRRequest = {
+      image: imagePreview,
+      language: "eng",
+      isTable: false,
+    };
+
+    extractTextMutation.mutate(ocrRequest);
   };
 
   const handleClearImage = () => {
@@ -97,6 +128,8 @@ const PhotoExtractor = () => {
     setImagePreview("");
     setExtractedText("");
     setShowResult(false);
+    setConfidence(0);
+    setWordCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -197,11 +230,11 @@ const PhotoExtractor = () => {
                   </p>
                   <Button 
                     onClick={handleExtractText}
-                    disabled={isExtracting}
+                    disabled={extractTextMutation.isPending}
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     data-testid="button-extract-text"
                   >
-                    {isExtracting ? (
+                    {extractTextMutation.isPending ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         Extracting...
@@ -296,13 +329,19 @@ const PhotoExtractor = () => {
                 data-testid="extracted-text-output"
               />
               <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center text-sm text-green-800">
-                  <i className="fas fa-check-circle mr-2"></i>
-                  <span>Text extraction completed successfully</span>
-                  <span className="ml-auto font-semibold">
-                    {extractedText.split(/\s+/).filter(word => word.length > 0).length} words
+                <div className="flex items-center justify-between text-sm text-green-800 mb-2">
+                  <span className="flex items-center">
+                    <i className="fas fa-check-circle mr-2"></i>
+                    Text extraction completed successfully
                   </span>
+                  <span className="font-semibold">{wordCount} words</span>
                 </div>
+                {confidence > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-700">
+                    <span>Confidence Score</span>
+                    <span className="font-semibold">{confidence.toFixed(1)}%</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
