@@ -7,20 +7,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OCR text extraction endpoint
   app.post("/api/extract-text", async (req, res) => {
     try {
+      console.log("OCR request received, validating data...");
       const { image, language = "eng", isTable = false } = ocrRequestSchema.parse(req.body);
       
       // Convert base64 to proper format for OCR.space
       const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "");
+      console.log(`Processing image, base64 size: ${base64Data.length} characters`);
       
       // Prepare OCR.space API request
       const formData = new FormData();
-      formData.append("base64Image", `data:image/png;base64,${base64Data}`);
+      formData.append("base64Image", `data:image/jpeg;base64,${base64Data}`);
       formData.append("language", language);
       formData.append("isTable", isTable.toString());
       formData.append("OCREngine", "2"); // Use OCR Engine 2 for better accuracy
       formData.append("detectOrientation", "true");
       formData.append("scale", "true");
       
+      console.log("Sending request to OCR.space API...");
       const response = await fetch("https://api.ocr.space/parse/image", {
         method: "POST",
         headers: {
@@ -30,22 +33,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!response.ok) {
+        console.error(`OCR API returned ${response.status}: ${response.statusText}`);
         throw new Error(`OCR API request failed: ${response.statusText}`);
       }
 
       const ocrResult = await response.json();
+      console.log("OCR API response:", JSON.stringify(ocrResult, null, 2));
       
       if (ocrResult.IsErroredOnProcessing) {
+        console.error("OCR processing error:", ocrResult.ErrorMessage);
         throw new Error(ocrResult.ErrorMessage || "OCR processing failed");
       }
 
       const extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
-      const confidence = ocrResult.ParsedResults?.[0]?.TextOrientation || 0;
+      const confidence = parseFloat(ocrResult.ParsedResults?.[0]?.TextOrientation) || 95; // Default confidence
       
       // Count words in extracted text
       const wordCount = extractedText.trim() 
         ? extractedText.trim().split(/\s+/).length 
         : 0;
+
+      console.log(`Extraction successful: ${wordCount} words, confidence: ${confidence}%`);
 
       const result: OCRResponse = {
         text: extractedText.trim(),

@@ -89,14 +89,40 @@ const PhotoExtractor = () => {
     setShowResult(false);
     setExtractedText("");
 
-    // Create preview
+    // Create optimized preview
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        setImagePreview(e.target.result as string);
+        optimizeImage(e.target.result as string);
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const optimizeImage = (originalDataUrl: string) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Calculate new dimensions (max 1920px width)
+      let { width, height } = img;
+      const maxWidth = 1920;
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw and compress
+      ctx?.drawImage(img, 0, 0, width, height);
+      const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setImagePreview(optimizedDataUrl);
+    };
+    img.src = originalDataUrl;
   };
 
   const handleDragOver = (e: React.DragEvent) => {
