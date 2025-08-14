@@ -48,12 +48,22 @@ const InteractiveTextOverlay = ({
   const scaleX = displayDimensions.width / imageDimensions.width || 1;
   const scaleY = displayDimensions.height / imageDimensions.height || 1;
 
-  const handleRegionClick = (region: TextRegion) => {
-    setSelectedRegion(region.id);
-    setEditingRegion(null);
+  const handleRegionClick = (region: TextRegion, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedRegion === region.id) {
+      // If already selected, start editing
+      setEditingRegion(region.id);
+      setTempText(region.text);
+      setSelectedRegion(null);
+    } else {
+      // Select the region
+      setSelectedRegion(region.id);
+      setEditingRegion(null);
+    }
   };
 
-  const handleRegionDoubleClick = (region: TextRegion) => {
+  const handleRegionDoubleClick = (region: TextRegion, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingRegion(region.id);
     setTempText(region.text);
     setSelectedRegion(null);
@@ -84,6 +94,7 @@ const InteractiveTextOverlay = ({
     const updatedRegions = textRegions.filter(region => region.id !== regionId);
     onTextRegionsChange(updatedRegions);
     setSelectedRegion(null);
+    setEditingRegion(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent, regionId: string) => {
@@ -94,10 +105,15 @@ const InteractiveTextOverlay = ({
     }
   };
 
+  const handleContainerClick = () => {
+    setSelectedRegion(null);
+    setEditingRegion(null);
+  };
+
   return (
     <div className="relative">
       {/* Image with overlay */}
-      <div ref={containerRef} className="relative inline-block">
+      <div ref={containerRef} className="relative inline-block" onClick={handleContainerClick}>
         <img
           ref={imageRef}
           src={imageUrl}
@@ -113,11 +129,13 @@ const InteractiveTextOverlay = ({
             {/* Text region box */}
             <div
               className={`absolute border-2 cursor-pointer transition-all ${
-                region.isVisible 
-                  ? selectedRegion === region.id
-                    ? 'border-blue-500 bg-blue-100 bg-opacity-50'
-                    : 'border-green-500 bg-green-100 bg-opacity-30 hover:bg-green-100 hover:bg-opacity-50'
-                  : 'border-red-500 bg-red-100 bg-opacity-30'
+                selectedRegion === region.id
+                  ? 'border-blue-600 bg-blue-200 bg-opacity-70 shadow-lg'
+                  : editingRegion === region.id
+                  ? 'border-orange-500 bg-orange-100 bg-opacity-50'
+                  : region.isVisible 
+                  ? 'border-green-500 bg-green-100 bg-opacity-40 hover:bg-green-200 hover:bg-opacity-60'
+                  : 'border-red-500 bg-red-100 bg-opacity-40 opacity-50'
               }`}
               style={{
                 left: `${region.x * scaleX}px`,
@@ -125,8 +143,8 @@ const InteractiveTextOverlay = ({
                 width: `${region.width * scaleX}px`,
                 height: `${region.height * scaleY}px`,
               }}
-              onClick={() => handleRegionClick(region)}
-              onDoubleClick={() => handleRegionDoubleClick(region)}
+              onClick={(e) => handleRegionClick(region, e)}
+              onDoubleClick={(e) => handleRegionDoubleClick(region, e)}
               data-testid={`text-region-${region.id}`}
             />
             
@@ -211,9 +229,10 @@ const InteractiveTextOverlay = ({
             <div>
               <strong>Instructions:</strong>
               <ul className="mt-1 space-y-1">
-                <li>• Click to select text regions</li>
-                <li>• Double-click to edit text</li>
-                <li>• Use controls below to manage</li>
+                <li>• <strong>Click once</strong> to select a text region</li>
+                <li>• <strong>Click again</strong> on selected region to edit</li>
+                <li>• <strong>Delete:</strong> Use red delete button below</li>
+                <li>• <strong>Click outside</strong> to deselect</li>
               </ul>
             </div>
             <div>
@@ -243,7 +262,14 @@ const InteractiveTextOverlay = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleRegionDoubleClick(textRegions.find(r => r.id === selectedRegion)!)}
+                onClick={() => {
+                  const region = textRegions.find(r => r.id === selectedRegion);
+                  if (region) {
+                    setEditingRegion(region.id);
+                    setTempText(region.text);
+                    setSelectedRegion(null);
+                  }
+                }}
                 data-testid="edit-selected-region"
               >
                 <i className="fas fa-edit mr-1"></i>Edit
