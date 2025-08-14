@@ -14,6 +14,7 @@ const PhotoExtractor = () => {
   const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showInteractiveMode, setShowInteractiveMode] = useState(false);
+  const [showFinalText, setShowFinalText] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +106,7 @@ const PhotoExtractor = () => {
     setExtractedText("");
     setTextRegions([]);
     setShowInteractiveMode(false);
+    setShowFinalText(false);
 
     // Create optimized preview
     const reader = new FileReader();
@@ -155,10 +157,11 @@ const PhotoExtractor = () => {
     const finalText = visibleRegions.map(region => region.text).join(' ');
     setExtractedText(finalText);
     setWordCount(finalText.trim() ? finalText.trim().split(/\s+/).length : 0);
+    setShowFinalText(true);
     
     toast({
       title: "Final text generated",
-      description: `Combined ${visibleRegions.length} visible regions into final text.`,
+      description: `Combined ${visibleRegions.length} visible regions. Text displayed on image.`,
     });
   };
 
@@ -193,6 +196,7 @@ const PhotoExtractor = () => {
     setTextRegions([]);
     setShowResult(false);
     setShowInteractiveMode(false);
+    setShowFinalText(false);
     setConfidence(0);
     setWordCount(0);
     if (fileInputRef.current) {
@@ -342,6 +346,8 @@ const PhotoExtractor = () => {
                   textRegions={textRegions}
                   onTextRegionsChange={handleTextRegionsChange}
                   onGenerateFinalText={handleGenerateFinalText}
+                  finalText={extractedText}
+                  showFinalText={showFinalText}
                 />
               </CardContent>
             </Card>
@@ -440,66 +446,7 @@ const PhotoExtractor = () => {
             </div>
           )}
 
-          {/* Extracted Text - Always show when results are available */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  <i className="fas fa-file-text text-green-600 mr-2"></i>Extracted Text
-                </h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copyToClipboard}
-                    disabled={!extractedText}
-                    data-testid="button-copy-text"
-                  >
-                    <i className="fas fa-copy"></i>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const element = document.createElement("a");
-                      const file = new Blob([extractedText], { type: 'text/plain' });
-                      element.href = URL.createObjectURL(file);
-                      element.download = "extracted_text.txt";
-                      document.body.appendChild(element);
-                      element.click();
-                      document.body.removeChild(element);
-                    }}
-                    disabled={!extractedText}
-                    data-testid="button-download-text"
-                  >
-                    <i className="fas fa-download"></i>
-                  </Button>
-                </div>
-              </div>
-              <Textarea
-                className="min-h-96 resize-none font-mono"
-                placeholder="Extracted text will appear here..."
-                value={extractedText}
-                onChange={(e) => setExtractedText(e.target.value)}
-                data-testid="extracted-text-output"
-              />
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center justify-between text-sm text-green-800 mb-2">
-                  <span className="flex items-center">
-                    <i className="fas fa-check-circle mr-2"></i>
-                    Text extraction completed successfully
-                  </span>
-                  <span className="font-semibold">{wordCount} words</span>
-                </div>
-                {confidence > 0 && (
-                  <div className="flex items-center justify-between text-sm text-green-700">
-                    <span>Confidence Score</span>
-                    <span className="font-semibold">{confidence.toFixed(1)}%</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
       )}
     </div>

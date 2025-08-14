@@ -8,13 +8,17 @@ interface InteractiveTextOverlayProps {
   textRegions: TextRegion[];
   onTextRegionsChange: (regions: TextRegion[]) => void;
   onGenerateFinalText: () => void;
+  finalText?: string;
+  showFinalText?: boolean;
 }
 
 const InteractiveTextOverlay = ({ 
   imageUrl, 
   textRegions, 
   onTextRegionsChange,
-  onGenerateFinalText 
+  onGenerateFinalText,
+  finalText = "",
+  showFinalText = false
 }: InteractiveTextOverlayProps) => {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [editingRegion, setEditingRegion] = useState<string | null>(null);
@@ -205,6 +209,55 @@ const InteractiveTextOverlay = ({
             )}
           </div>
         ))}
+
+        {/* Final extracted text overlay */}
+        {showFinalText && finalText && (
+          <div className="absolute top-0 right-0 m-4 max-w-md bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-lg border-2 border-green-500">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-green-700 text-sm">
+                  <i className="fas fa-check-circle mr-2"></i>Final Extracted Text
+                </h4>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-1"
+                    onClick={() => {
+                      navigator.clipboard.writeText(finalText);
+                    }}
+                    data-testid="copy-final-text"
+                  >
+                    <i className="fas fa-copy text-xs"></i>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-1"
+                    onClick={() => {
+                      const element = document.createElement("a");
+                      const file = new Blob([finalText], { type: 'text/plain' });
+                      element.href = URL.createObjectURL(file);
+                      element.download = "extracted_text.txt";
+                      document.body.appendChild(element);
+                      element.click();
+                      document.body.removeChild(element);
+                    }}
+                    data-testid="download-final-text"
+                  >
+                    <i className="fas fa-download text-xs"></i>
+                  </Button>
+                </div>
+              </div>
+              <div className="bg-green-50 rounded p-3 text-sm font-mono text-green-900 whitespace-pre-wrap">
+                {finalText}
+              </div>
+              <div className="mt-2 text-xs text-green-600 text-center">
+                {finalText.trim().split(/\s+/).length} words extracted
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Control panel */}
