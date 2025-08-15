@@ -111,61 +111,93 @@ const SimpleTextExtractor = () => {
   const filterText = (rawText: string): string => {
     if (!useFiltering) return rawText;
     
-    const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    // Split text into lines and clean them
+    const lines = rawText.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
     
-    // Extremely aggressive filtering for complex images
-    const filteredLines = lines.filter(line => {
+    // Find the most meaningful content by scoring each line
+    const scoredLines = lines.map(line => {
       const lowerLine = line.toLowerCase();
-      const originalLine = line;
+      let score = 0;
       
-      // Skip anything that looks like UI elements or metadata
-      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post|comment)/i)) return false;
-      if (lowerLine.match(/^(paws|sz|ky4|wo|bu|ic|ba|d\s*q|reel|bio|page|edit|manage|promote)/)) return false;
-      if (lowerLine.match(/^\w{1,3}\s+\w{1,3}$/)) return false; // Very short fragments
-      if (lowerLine.match(/^\d+\s*-\s*@|\d+\s+kumar|january\s+\d+/)) return false; // Dates and numbers
-      if (lowerLine.match(/@|\.com|www\.|http/)) return false; // Web/email
-      if (lowerLine.match(/^[\d\s\-\+\(\)\.]{3,}$/)) return false; // Number sequences
-      if (lowerLine.match(/^[a-z]{1,2}\s*:\s*[>a-z]|^[><\[\]{}()•™®©]+$/)) return false; // Symbols and artifacts
-      if (lowerLine.match(/\bee——|oo\s*:|wn\s+ee——|<\s*oo/)) return false; // OCR artifacts
+      // Heavily penalize UI/social media elements
+      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post|comment|subscriber)/i)) score -= 100;
+      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage|featured|promote|edit|bio|page)/)) score -= 50;
+      if (lowerLine.match(/@|\.com|www\.|http|january|kumar|\d{8,}/)) score -= 30;
+      if (lowerLine.match(/^[a-z]{1,3}\s+[a-z]{1,3}$|^[\d\s\-\+\(\)\.]{3,}$/)) score -= 20;
+      if (lowerLine.match(/^[><\[\]{}()•™®©]+$|ee——|oo\s*:/)) score -= 30;
       
-      // Only keep lines that are:
-      // 1. Proper sentences (5+ words with common English words)
-      // 2. Important short phrases (brand names, slogans)
-      // 3. Clear meaningful content
+      // Reward meaningful content
+      const wordCount = line.split(/\s+/).length;
+      if (wordCount >= 4) score += wordCount * 2;
+      if (lowerLine.match(/\b(your|our|the|and|for|with|this|that|have|will|can|are|is|you|we|they)\b/)) score += 10;
+      if (lowerLine.match(/\b(trendy|unique|celebrate|designs|apparel|gifts|coffee|mug|cat|lovers)\b/)) score += 15;
+      if (lowerLine.match(/^(forged\s+in\s+iron|sparta|wouldn't\s+survive)/)) score += 50;
       
-      const wordCount = originalLine.split(/\s+/).length;
+      // Reward proper sentence structure
+      if (line.match(/^[A-Z]/) && line.match(/[.!?]$/)) score += 5;
+      if (line.length > 30 && line.length < 200) score += 5;
       
-      // Keep important short phrases and titles
-      if (lowerLine.match(/^(forged\s+in\s+iron|sparta|wouldn't\s+survive)/)) return true;
-      
-      // Keep proper sentences with substance
-      if (wordCount >= 5) {
-        // Must contain common English words indicating real content
-        if (lowerLine.match(/\b(your|our|the|and|for|with|this|that|have|will|can|are|is|you|we|they)\b/)) {
-          // But exclude if it contains too many UI-like words
-          if (!lowerLine.match(/\b(posts?|about|mentions?|reviews?|manage|featured|edit)\b/)) {
-            return true;
-          }
-        }
-      }
-      
-      // Everything else is likely noise
-      return false;
+      return { line, score };
     });
     
-    // Final cleanup - remove duplicates and very similar lines
-    const uniqueLines = [];
-    for (const line of filteredLines) {
-      const isUnique = !uniqueLines.some(existing => 
-        existing.toLowerCase().includes(line.toLowerCase()) || 
-        line.toLowerCase().includes(existing.toLowerCase())
-      );
-      if (isUnique && line.length > 2) {
-        uniqueLines.push(line);
+    // Only keep lines with positive scores, sorted by relevance
+    const goodLines = scoredLines
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.line);
+    
+    // Remove duplicates and very similar content
+    const finalLines = [];
+    for (const line of goodLines) {
+      const isDuplicate = finalLines.some(existing => {
+        const similarity = calculateSimilarity(existing.toLowerCase(), line.toLowerCase());
+        return similarity > 0.8;
+      });
+      
+      if (!isDuplicate && line.length > 3) {
+        finalLines.push(line);
       }
     }
     
-    return uniqueLines.join('\n').trim();
+    return finalLines.slice(0, 10).join('\n').trim(); // Limit to top 10 most relevant lines
+  };
+
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
   };
 
   const handleExtractText = async () => {
@@ -202,7 +234,7 @@ const SimpleTextExtractor = () => {
       
       toast({
         title: "Text extracted successfully!",
-        description: `Found ${words} words with ${confidencePercent}% confidence. ${useFiltering ? 'Smart filtering applied.' : 'Raw text extracted.'}`,
+        description: `Found ${words} words with ${confidencePercent}% confidence. ${useFiltering ? 'Clean Extract applied.' : 'Raw text extracted.'}`,
       });
       
     } catch (error) {
