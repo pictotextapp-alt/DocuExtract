@@ -22,10 +22,11 @@ interface CanvaTextEditorProps {
   originalImage: string;
   textRegions: TextRegion[];
   textLines?: TextLine[]; // Enhanced line-based processing
+  cleanedImage?: string; // Auto-provided by PhotoExtractor
   onTextLayersChange?: (layers: TextLayer[]) => void;
 }
 
-const CanvaTextEditor = ({ originalImage, textRegions, textLines, onTextLayersChange }: CanvaTextEditorProps) => {
+const CanvaTextEditor = ({ originalImage, textRegions, textLines, cleanedImage: externalCleanedImage, onTextLayersChange }: CanvaTextEditorProps) => {
   const [cleanedImage, setCleanedImage] = useState<string>("");
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
@@ -169,20 +170,15 @@ const CanvaTextEditor = ({ originalImage, textRegions, textLines, onTextLayersCh
     },
   });
 
-  const handleGrabText = () => {
-    if (!originalImage || (textLines?.length === 0 && textRegions.length === 0)) return;
-    
-    const inpaintRequest: InpaintRequest = {
-      originalImage,
-      textLines: textLines, // Preferred: line-based processing for better masks
-      textRegions: textRegions, // Fallback: region-based processing
-      maskExpansion: 4, // Expand masks by 4px
-      maskFeather: 3, // Feather edges by 3px
-      useAdvancedInpainting: true, // Use enhanced algorithms
-    };
-    
-    inpaintMutation.mutate(inpaintRequest);
-  };
+  // Update cleaned image when provided by PhotoExtractor
+  useEffect(() => {
+    if (externalCleanedImage) {
+      setCleanedImage(externalCleanedImage);
+    } else if (originalImage && textLayers.length > 0 && !cleanedImage) {
+      // Use the original image as background until inpainting completes
+      setCleanedImage(originalImage);
+    }
+  }, [externalCleanedImage, originalImage, textLayers.length, cleanedImage]);
 
   const updateTextLayer = useCallback((id: string, updates: Partial<TextLayer>) => {
     setTextLayers(prev => {

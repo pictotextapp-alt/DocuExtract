@@ -18,8 +18,68 @@ const PhotoExtractor = () => {
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
+  const [cleanedImage, setCleanedImage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Auto-inpainting mutation for seamless workflow
+  const autoInpaintMutation = useMutation({
+    mutationFn: async ({ originalImage, textLines, textRegions }: { originalImage: string; textLines?: TextLine[]; textRegions: TextRegion[] }) => {
+      const response = await fetch("/api/inpaint-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalImage,
+          textLines: textLines,
+          textRegions: textRegions,
+          maskExpansion: 4,
+          maskFeather: 3,
+          useAdvancedInpainting: true,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setCleanedImage(data.cleanedImage);
+        toast({
+          title: "Text extraction complete!",
+          description: "Your editable text elements are ready. You can now move, style, and edit each text element independently.",
+        });
+      } else {
+        toast({
+          title: "Processing failed",
+          description: data.error || "Failed to process the image.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Processing error",
+        description: "An error occurred while creating editable text. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Auto-inpainting error:", error);
+    },
+  });
+
+  const triggerAutoInpainting = (ocrData: OCRResponse) => {
+    if (!imagePreview) return;
+    
+    autoInpaintMutation.mutate({
+      originalImage: imagePreview,
+      textLines: ocrData.textLines,
+      textRegions: ocrData.textRegions || [],
+    });
+  };
 
   const extractTextMutation = useMutation({
     mutationFn: async (ocrRequest: OCRRequest): Promise<OCRResponse> => {
@@ -53,11 +113,16 @@ const PhotoExtractor = () => {
         if (hasTextData) {
           setShowAdvancedEditor(true);
           const lineCount = data.textLines?.length || 0;
-          const regionCount = data.textRegions?.length || 0;
+          
           toast({
-            title: "Text detection complete",
-            description: `Found ${data.words} words in ${lineCount > 0 ? `${lineCount} lines` : `${regionCount} regions`}. Click "Grab Text" to make them editable.`,
+            title: "Text detected, creating editable version...",
+            description: `Found ${data.words} words in ${lineCount > 0 ? `${lineCount} lines` : `${data.textRegions?.length || 0} regions`}. Processing...`,
           });
+          
+          // Automatically trigger inpainting process
+          setTimeout(() => {
+            triggerAutoInpainting(data);
+          }, 500);
         } else {
           setShowAdvancedEditor(false);
           toast({
@@ -219,6 +284,7 @@ const PhotoExtractor = () => {
     setShowResult(false);
     setShowAdvancedEditor(false);
     setTextLayers([]);
+    setCleanedImage("");
     setConfidence(0);
     setWordCount(0);
     if (fileInputRef.current) {
@@ -421,6 +487,7 @@ const PhotoExtractor = () => {
               originalImage={imagePreview}
               textRegions={textRegions}
               textLines={textLines}
+              cleanedImage={cleanedImage}
               onTextLayersChange={setTextLayers}
             />
           )}
