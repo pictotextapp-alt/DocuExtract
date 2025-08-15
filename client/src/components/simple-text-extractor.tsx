@@ -17,6 +17,7 @@ const SimpleTextExtractor = () => {
   const [wordCount, setWordCount] = useState(0);
   const [rawText, setRawText] = useState("");
   const [useFiltering, setUseFiltering] = useState(true);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -116,29 +117,60 @@ const SimpleTextExtractor = () => {
     const filteredLines = lines.filter(line => {
       const lowerLine = line.toLowerCase();
       
-      // Skip social media UI elements
-      if (lowerLine.match(/^\d+(\.\d+)?k?\s*(likes?|followers?|following|views?)/)) return false;
-      if (lowerLine.match(/^(like|share|comment|follow|subscribe|@|#)/)) return false;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage)/)) return false;
-      if (lowerLine.match(/^(edit|bio|page|featured|live\s+video)/)) return false;
-      if (lowerLine.match(/^\w{2,4}\s+\d+$/)) return false; // Date patterns like "Jan 4"
+      // Skip social media UI elements (more aggressive)
+      if (lowerLine.match(/^\d+(\.\d+)?[km]?\s*(likes?|followers?|following|views?|shares?)/)) return false;
+      if (lowerLine.match(/^(like|share|comment|follow|subscribe|@|#|intro)/)) return false;
+      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage|featured|promote)/)) return false;
+      if (lowerLine.match(/^(edit|bio|page|live\s+video|photo\/video|reel)/)) return false;
+      if (lowerLine.match(/^\w{2,4}\s+\d+\s*[•@©]/)) return false; // Date patterns with symbols
       if (lowerLine.match(/^[a-zA-Z]{1,3}\s+[a-zA-Z]{1,3}$/)) return false; // Short fragments
       if (lowerLine.match(/^[\d\s\-\.\+\(\)]+$/)) return false; // Numbers/phone patterns
+      if (lowerLine.match(/^\d{8,}/)) return false; // Long number sequences
       if (lowerLine.match(/^\w+@\w+\.\w+/)) return false; // Email addresses
       if (lowerLine.match(/^https?:\/\//)) return false; // URLs
-      if (lowerLine.match(/^(©|®|™)/)) return false; // Copyright symbols
+      if (lowerLine.match(/^www\./)) return false; // Website patterns
+      if (lowerLine.match(/^(©|®|™|•|@)/)) return false; // Special symbols at start
+      if (lowerLine.match(/^[a-z]{2,4}\s+[a-z]{2,4}$/)) return false; // Two short words
+      if (lowerLine.match(/^\w{1,2}\s*:\s*>/)) return false; // Weird patterns like ": >"
+      if (lowerLine.match(/^(sz|ky4|wo|bu)/)) return false; // Random fragments
+      if (lowerLine.match(/^-\s*[a-z]/)) return false; // Lines starting with dash
+      if (lowerLine.match(/^\d+\s*-\s*@/)) return false; // Number dash at patterns
       
-      // Skip very short lines (less than 3 words) unless they seem important
+      // Filter out nonsensical character combinations
+      if (lowerLine.match(/^["'<>{}[\]()]+$/)) return false; // Only punctuation
+      if (lowerLine.match(/^[a-z]\s+[a-z]\s+[a-z]$/)) return false; // Single letters spaced
+      if (lowerLine.match(/ee——|oo\s*:\s*=|[<>=]+/)) return false; // Weird OCR artifacts
+      
+      // Skip very short lines (less than 4 words) unless they contain meaningful keywords
       const wordCount = line.split(/\s+/).length;
-      if (wordCount < 3 && !lowerLine.match(/^(sale|free|new|hot|deal|offer|save)/)) {
+      if (wordCount < 4 && !lowerLine.match(/^(sale|free|new|hot|deal|offer|save|forged|iron|sparta|wouldn't|survive)/)) {
         return false;
       }
+      
+      // Keep lines that look like real content (have proper sentence structure)
+      if (line.length > 20 && lowerLine.match(/\b(the|and|for|with|your|our|this|that|have|will|can|are|is)\b/)) {
+        return true;
+      }
+      
+      // Skip lines that are mostly uppercase fragments (likely UI elements)
+      if (line.match(/^[A-Z\s]{3,}$/) && wordCount < 4) return false;
       
       return true;
     });
     
+    // Additional cleanup - merge lines that seem to belong together
+    const cleanedLines = [];
+    for (let i = 0; i < filteredLines.length; i++) {
+      const line = filteredLines[i];
+      
+      // Skip if it's just a single character or very short meaningless text
+      if (line.length < 3) continue;
+      
+      cleanedLines.push(line);
+    }
+    
     // Join meaningful content with proper spacing
-    return filteredLines.join('\n').trim();
+    return cleanedLines.join('\n').trim();
   };
 
   const handleExtractText = async () => {
@@ -153,9 +185,14 @@ const SimpleTextExtractor = () => {
         {
           logger: m => {
             if (m.status === 'recognizing text') {
-              console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+              const progress = Math.round(m.progress * 100);
+              setOcrProgress(progress);
+              console.log(`OCR Progress: ${progress}%`);
             }
-          }
+          },
+          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-\'\"',
+          preserve_interword_spaces: '1'
         }
       );
       
@@ -184,6 +221,7 @@ const SimpleTextExtractor = () => {
       });
     } finally {
       setIsProcessing(false);
+      setOcrProgress(0);
     }
   };
 
@@ -278,7 +316,7 @@ const SimpleTextExtractor = () => {
                     {isProcessing ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Extracting Text...
+                        {ocrProgress > 0 ? `Extracting... ${ocrProgress}%` : 'Initializing...'}
                       </>
                     ) : (
                       <>
