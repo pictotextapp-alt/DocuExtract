@@ -128,8 +128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function compressImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const { createCanvas, loadImage } = require('canvas');
+    return new Promise(async (resolve, reject) => {
+      const { createCanvas, loadImage } = await import('canvas');
       
       loadImage(buffer).then((img: any) => {
         // Calculate new dimensions to keep under 900KB
@@ -166,8 +166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function preprocessImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const { createCanvas, loadImage } = require('canvas');
+    return new Promise(async (resolve, reject) => {
+      const { createCanvas, loadImage } = await import('canvas');
       
       loadImage(buffer).then((img: any) => {
         const { width, height } = img;
