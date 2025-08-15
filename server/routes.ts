@@ -75,33 +75,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   function filterOCRText(text: string): string {
-    // Check for OCR garbage - text with too many symbols or unreadable characters
+    console.log("Original OCR text:", text);
+    
+    // Check for completely garbled OCR (lots of symbols but no real words)
     const hasRealWords = text.match(/\b[A-Za-z]{3,}\b/g);
     const weirdChars = (text.match(/[¥€£™®©§¶†‡•…‰′″‹›«»]/g) || []).length;
     const symbolRatio = (text.match(/[^\w\s]/g) || []).length / text.length;
     
-    // If OCR failed (few real words OR lots of weird symbols OR high symbol ratio)
-    if (!hasRealWords || hasRealWords.length < 2 || weirdChars > 2 || symbolRatio > 0.4) {
+    console.log("Real words found:", hasRealWords ? hasRealWords.length : 0);
+    console.log("Weird chars:", weirdChars);
+    console.log("Symbol ratio:", symbolRatio);
+    
+    // Only show error message for completely garbled text (very high symbol ratio AND very few real words)
+    if ((!hasRealWords || hasRealWords.length < 3) && (weirdChars > 5 || symbolRatio > 0.6)) {
       return "OCR could not extract readable text from this image.\n\nThe text appears to be too stylized, decorative, or low resolution for accurate recognition.\n\nTry using:\n• Plain text documents\n• Screenshots with simple fonts\n• High-contrast images\n• Less decorative text styles";
     }
     
-    // Clean up the text by removing obvious social media UI elements
+    // Clean up the text by removing obvious social media UI elements but keep meaningful content
     const lines = text.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
     
     const cleanLines = lines.filter(line => {
       const lowerLine = line.toLowerCase();
       
-      // Skip social media UI elements
-      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post)/i)) return false;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|manage|edit)/)) return false;
-      if (lowerLine.match(/@|\.com|www\.|http/)) return false;
+      // Skip obvious UI noise but be less aggressive
+      if (lowerLine.match(/^\d+(\.\d+)?[km]?\s*(like|follow|view|share)s?$/i)) return false; // Only skip standalone like/follow counts
+      if (lowerLine.match(/^(manage|edit|more)$/i)) return false; // Only skip standalone UI words
+      if (lowerLine.match(/^@[a-z0-9_]+$/)) return false; // Skip standalone handles
       
-      // Keep lines with at least some readable content
-      const readableWords = line.split(/\s+/).filter(word => word.match(/^[A-Za-z]{2,}$/));
-      return readableWords.length >= 1;
+      // Keep lines with any readable content (even single words)
+      const readableChars = line.match(/[A-Za-z]/g);
+      return readableChars && readableChars.length >= 2; // Keep if has at least 2 letters
     });
     
-    return cleanLines.slice(0, 10).join('\n').trim();
+    const result = cleanLines.slice(0, 20).join('\n').trim(); // Increased limit to 20 lines
+    console.log("Filtered result:", result);
+    return result;
   }
 
   const httpServer = createServer(app);
