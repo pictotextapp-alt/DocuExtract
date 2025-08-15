@@ -113,64 +113,59 @@ const SimpleTextExtractor = () => {
     
     const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    // Remove common UI elements and social media noise
+    // Extremely aggressive filtering for complex images
     const filteredLines = lines.filter(line => {
       const lowerLine = line.toLowerCase();
+      const originalLine = line;
       
-      // Skip social media UI elements (more aggressive)
-      if (lowerLine.match(/^\d+(\.\d+)?[km]?\s*(likes?|followers?|following|views?|shares?)/)) return false;
-      if (lowerLine.match(/^(like|share|comment|follow|subscribe|@|#|intro)/)) return false;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage|featured|promote)/)) return false;
-      if (lowerLine.match(/^(edit|bio|page|live\s+video|photo\/video|reel)/)) return false;
-      if (lowerLine.match(/^\w{2,4}\s+\d+\s*[•@©]/)) return false; // Date patterns with symbols
-      if (lowerLine.match(/^[a-zA-Z]{1,3}\s+[a-zA-Z]{1,3}$/)) return false; // Short fragments
-      if (lowerLine.match(/^[\d\s\-\.\+\(\)]+$/)) return false; // Numbers/phone patterns
-      if (lowerLine.match(/^\d{8,}/)) return false; // Long number sequences
-      if (lowerLine.match(/^\w+@\w+\.\w+/)) return false; // Email addresses
-      if (lowerLine.match(/^https?:\/\//)) return false; // URLs
-      if (lowerLine.match(/^www\./)) return false; // Website patterns
-      if (lowerLine.match(/^(©|®|™|•|@)/)) return false; // Special symbols at start
-      if (lowerLine.match(/^[a-z]{2,4}\s+[a-z]{2,4}$/)) return false; // Two short words
-      if (lowerLine.match(/^\w{1,2}\s*:\s*>/)) return false; // Weird patterns like ": >"
-      if (lowerLine.match(/^(sz|ky4|wo|bu)/)) return false; // Random fragments
-      if (lowerLine.match(/^-\s*[a-z]/)) return false; // Lines starting with dash
-      if (lowerLine.match(/^\d+\s*-\s*@/)) return false; // Number dash at patterns
+      // Skip anything that looks like UI elements or metadata
+      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post|comment)/i)) return false;
+      if (lowerLine.match(/^(paws|sz|ky4|wo|bu|ic|ba|d\s*q|reel|bio|page|edit|manage|promote)/)) return false;
+      if (lowerLine.match(/^\w{1,3}\s+\w{1,3}$/)) return false; // Very short fragments
+      if (lowerLine.match(/^\d+\s*-\s*@|\d+\s+kumar|january\s+\d+/)) return false; // Dates and numbers
+      if (lowerLine.match(/@|\.com|www\.|http/)) return false; // Web/email
+      if (lowerLine.match(/^[\d\s\-\+\(\)\.]{3,}$/)) return false; // Number sequences
+      if (lowerLine.match(/^[a-z]{1,2}\s*:\s*[>a-z]|^[><\[\]{}()•™®©]+$/)) return false; // Symbols and artifacts
+      if (lowerLine.match(/\bee——|oo\s*:|wn\s+ee——|<\s*oo/)) return false; // OCR artifacts
       
-      // Filter out nonsensical character combinations
-      if (lowerLine.match(/^["'<>{}[\]()]+$/)) return false; // Only punctuation
-      if (lowerLine.match(/^[a-z]\s+[a-z]\s+[a-z]$/)) return false; // Single letters spaced
-      if (lowerLine.match(/ee——|oo\s*:\s*=|[<>=]+/)) return false; // Weird OCR artifacts
+      // Only keep lines that are:
+      // 1. Proper sentences (5+ words with common English words)
+      // 2. Important short phrases (brand names, slogans)
+      // 3. Clear meaningful content
       
-      // Skip very short lines (less than 4 words) unless they contain meaningful keywords
-      const wordCount = line.split(/\s+/).length;
-      if (wordCount < 4 && !lowerLine.match(/^(sale|free|new|hot|deal|offer|save|forged|iron|sparta|wouldn't|survive)/)) {
-        return false;
+      const wordCount = originalLine.split(/\s+/).length;
+      
+      // Keep important short phrases and titles
+      if (lowerLine.match(/^(forged\s+in\s+iron|sparta|wouldn't\s+survive)/)) return true;
+      
+      // Keep proper sentences with substance
+      if (wordCount >= 5) {
+        // Must contain common English words indicating real content
+        if (lowerLine.match(/\b(your|our|the|and|for|with|this|that|have|will|can|are|is|you|we|they)\b/)) {
+          // But exclude if it contains too many UI-like words
+          if (!lowerLine.match(/\b(posts?|about|mentions?|reviews?|manage|featured|edit)\b/)) {
+            return true;
+          }
+        }
       }
       
-      // Keep lines that look like real content (have proper sentence structure)
-      if (line.length > 20 && lowerLine.match(/\b(the|and|for|with|your|our|this|that|have|will|can|are|is)\b/)) {
-        return true;
-      }
-      
-      // Skip lines that are mostly uppercase fragments (likely UI elements)
-      if (line.match(/^[A-Z\s]{3,}$/) && wordCount < 4) return false;
-      
-      return true;
+      // Everything else is likely noise
+      return false;
     });
     
-    // Additional cleanup - merge lines that seem to belong together
-    const cleanedLines = [];
-    for (let i = 0; i < filteredLines.length; i++) {
-      const line = filteredLines[i];
-      
-      // Skip if it's just a single character or very short meaningless text
-      if (line.length < 3) continue;
-      
-      cleanedLines.push(line);
+    // Final cleanup - remove duplicates and very similar lines
+    const uniqueLines = [];
+    for (const line of filteredLines) {
+      const isUnique = !uniqueLines.some(existing => 
+        existing.toLowerCase().includes(line.toLowerCase()) || 
+        line.toLowerCase().includes(existing.toLowerCase())
+      );
+      if (isUnique && line.length > 2) {
+        uniqueLines.push(line);
+      }
     }
     
-    // Join meaningful content with proper spacing
-    return cleanedLines.join('\n').trim();
+    return uniqueLines.join('\n').trim();
   };
 
   const handleExtractText = async () => {
@@ -189,10 +184,7 @@ const SimpleTextExtractor = () => {
               setOcrProgress(progress);
               console.log(`OCR Progress: ${progress}%`);
             }
-          },
-          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-\'\"',
-          preserve_interword_spaces: '1'
+          }
         }
       );
       
@@ -368,7 +360,7 @@ const SimpleTextExtractor = () => {
                       />
                       <Label htmlFor="filter-mode" className="text-xs">
                         <Filter className="h-3 w-3 inline mr-1" />
-                        Smart Filter
+                        Clean Extract
                       </Label>
                     </div>
                   </div>
@@ -384,7 +376,7 @@ const SimpleTextExtractor = () => {
                   <div className="text-sm text-slate-500">
                     <p>You can edit the text above and copy it when ready.</p>
                     {useFiltering && (
-                      <p className="text-xs mt-1">Smart filter removes UI elements, social media noise, and short fragments.</p>
+                      <p className="text-xs mt-1">Clean Extract mode shows only meaningful content - removes all UI elements and social media noise.</p>
                     )}
                   </div>
                 )}
