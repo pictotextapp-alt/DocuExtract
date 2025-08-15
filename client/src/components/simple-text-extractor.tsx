@@ -21,56 +21,11 @@ const SimpleTextExtractor = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const preprocessImageForOCR = (file: File): Promise<string> => {
+  const handleImageForPreview = (file: File): Promise<string> => {
     return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const img = new Image();
-      
-      img.onload = () => {
-        // Scale up for better OCR accuracy
-        let { width, height } = img;
-        const scaleFactor = 2; // Scale up 2x for better text recognition
-        
-        canvas.width = width * scaleFactor;
-        canvas.height = height * scaleFactor;
-        
-        // Enable image smoothing for better text rendering
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        
-        // Draw scaled image
-        ctx.drawImage(img, 0, 0, width * scaleFactor, height * scaleFactor);
-        
-        // Get image data for preprocessing
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        
-        // Apply contrast enhancement and convert to grayscale
-        for (let i = 0; i < data.length; i += 4) {
-          // Convert to grayscale using luminance formula
-          const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-          
-          // Apply contrast enhancement - make text darker, background lighter
-          const enhanced = gray < 128 ? Math.max(0, gray - 40) : Math.min(255, gray + 40);
-          
-          data[i] = enhanced;     // Red
-          data[i + 1] = enhanced; // Green  
-          data[i + 2] = enhanced; // Blue
-          // Alpha remains unchanged
-        }
-        
-        // Put the processed image data back
-        ctx.putImageData(imageData, 0, 0);
-        
-        // Convert to high-quality PNG for better OCR
-        const processedDataUrl = canvas.toDataURL('image/png');
-        resolve(processedDataUrl);
-      };
-      
       const reader = new FileReader();
       reader.onload = (e) => {
-        img.src = e.target?.result as string;
+        resolve(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     });
@@ -101,9 +56,9 @@ const SimpleTextExtractor = () => {
     setSelectedImage(file);
     
     try {
-      // Preprocess image for better OCR accuracy
-      const processedImage = await preprocessImageForOCR(file);
-      setImagePreview(processedImage);
+      // Keep original image for preview
+      const originalImage = await handleImageForPreview(file);
+      setImagePreview(originalImage);
       
       // Reset previous results
       setExtractedText("");
@@ -123,48 +78,33 @@ const SimpleTextExtractor = () => {
   const filterText = (rawText: string): string => {
     if (!useFiltering) return rawText;
     
-    // Split text into lines and clean them
+    // For images with mostly OCR garbage, return a simple message
+    const hasRealWords = rawText.match(/\b[A-Za-z]{3,}\b/g);
+    const symbolCount = (rawText.match(/[^\w\s]/g) || []).length;
+    const totalLength = rawText.length;
+    
+    if (!hasRealWords || hasRealWords.length < 3 || (symbolCount / totalLength) > 0.3) {
+      return "OCR could not extract readable text from this image.\nThe text may be too stylized, decorative, or low resolution.\n\nTry:\n• Using a clearer, higher resolution image\n• Images with simple, clean text\n• Documents or screenshots with plain text";
+    }
+    
+    // Split into lines and clean
     const lines = rawText.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
     
-    // Find the most meaningful content by scoring each line
-    const scoredLines = lines.map(line => {
+    // Keep only lines that look like real text
+    const cleanLines = lines.filter(line => {
       const lowerLine = line.toLowerCase();
-      let score = 0;
       
-      // Heavily penalize UI/social media elements
-      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post|comment|subscriber)/i)) score -= 100;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage|featured|promote|edit|bio|page)/)) score -= 50;
-      if (lowerLine.match(/@|\.com|www\.|http|january|kumar|\d{8,}/)) score -= 30;
-      if (lowerLine.match(/^[a-z]{1,3}\s+[a-z]{1,3}$|^[\d\s\-\+\(\)\.]{3,}$/)) score -= 20;
-      if (lowerLine.match(/^[><\[\]{}()•™®©]+$|ee——|oo\s*:/)) score -= 30;
+      // Skip obvious social media UI
+      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post)/i)) return false;
+      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|manage|edit)/)) return false;
+      if (lowerLine.match(/@|\.com|www\.|http/)) return false;
       
-      // Reward meaningful content
-      const wordCount = line.split(/\s+/).length;
-      if (wordCount >= 4) score += wordCount * 2;
-      if (lowerLine.match(/\b(your|our|the|and|for|with|this|that|have|will|can|are|is|you|we|they)\b/)) score += 10;
-      if (lowerLine.match(/\b(trendy|unique|celebrate|designs|apparel|gifts|coffee|mug|cat|lovers)\b/)) score += 15;
-      if (lowerLine.match(/^(forged\s+in\s+iron|sparta|wouldn't\s+survive)/)) score += 50;
-      
-      // Reward proper sentence structure
-      if (line.match(/^[A-Z]/) && line.match(/[.!?]$/)) score += 5;
-      if (line.length > 30 && line.length < 200) score += 5;
-      
-      return { line, score };
+      // Keep lines with readable words (at least 2 words, each 2+ chars)
+      const words = line.split(/\s+/).filter(word => word.match(/^[A-Za-z]{2,}$/));
+      return words.length >= 2;
     });
     
-    // Only keep lines with positive scores, sorted by relevance
-    const goodLines = scoredLines
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(item => item.line);
-    
-    console.log("Scored lines:", scoredLines.map(item => ({ line: item.line.substring(0, 50) + "...", score: item.score })));
-    console.log("Good lines (score > 0):", goodLines);
-    
-    // Simple filtering - just keep the highest scoring lines
-    const result = goodLines.slice(0, 5).join('\n').trim();
-    console.log("Final result:", result);
-    return result;
+    return cleanLines.slice(0, 10).join('\n').trim();
   };
 
   const calculateSimilarity = (str1: string, str2: string): number => {
@@ -227,18 +167,8 @@ const SimpleTextExtractor = () => {
       
       // Store raw text and apply filtering
       setRawText(text);
-      console.log("Raw OCR text:", text);
-      
-      // If OCR failed badly (mostly symbols/gibberish), try a fallback approach
-      const hasRealWords = text.match(/[a-zA-Z]{3,}/g);
-      const symbolRatio = (text.match(/[<>|\\()=]/g) || []).length / text.length;
-      
-      console.log("Real words found:", hasRealWords);
-      console.log("Symbol ratio:", symbolRatio);
-      
+      // Apply filtering
       const filteredText = filterText(text);
-      console.log("Filtered text:", filteredText);
-      console.log("Filter enabled:", useFiltering);
       
       const finalText = (filteredText && filteredText.trim().length > 0) ? filteredText : text;
       
