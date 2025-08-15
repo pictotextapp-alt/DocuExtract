@@ -146,20 +146,13 @@ const SimpleTextExtractor = () => {
       .sort((a, b) => b.score - a.score)
       .map(item => item.line);
     
-    // Remove duplicates and very similar content
-    const finalLines = [];
-    for (const line of goodLines) {
-      const isDuplicate = finalLines.some(existing => {
-        const similarity = calculateSimilarity(existing.toLowerCase(), line.toLowerCase());
-        return similarity > 0.8;
-      });
-      
-      if (!isDuplicate && line.length > 3) {
-        finalLines.push(line);
-      }
-    }
+    console.log("Scored lines:", scoredLines.map(item => ({ line: item.line.substring(0, 50) + "...", score: item.score })));
+    console.log("Good lines (score > 0):", goodLines);
     
-    return finalLines.slice(0, 10).join('\n').trim(); // Limit to top 10 most relevant lines
+    // Simple filtering - just keep the highest scoring lines
+    const result = goodLines.slice(0, 5).join('\n').trim();
+    console.log("Final result:", result);
+    return result;
   };
 
   const calculateSimilarity = (str1: string, str2: string): number => {
@@ -222,8 +215,13 @@ const SimpleTextExtractor = () => {
       
       // Store raw text and apply filtering
       setRawText(text);
+      console.log("Raw OCR text:", text);
+      
       const filteredText = filterText(text);
-      const finalText = filteredText || text; // Fallback to raw if filtering removes everything
+      console.log("Filtered text:", filteredText);
+      console.log("Filter enabled:", useFiltering);
+      
+      const finalText = (filteredText && filteredText.trim().length > 0) ? filteredText : text;
       
       const words = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
       const confidencePercent = Math.round(confidence);
