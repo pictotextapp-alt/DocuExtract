@@ -1,4 +1,4 @@
-import PhotoExtractor from "@/components/photo-extractor";
+import SimpleTextExtractor from "@/components/simple-text-extractor";
 
 const Home = () => {
   return (
@@ -6,18 +6,17 @@ const Home = () => {
       {/* Hero Section */}
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6">
-          Extract Text from Any Image
-          <span className="block text-blue-600">Instantly & Accurately</span>
+          Simple Text Extraction
+          <span className="block text-blue-600">Fast & Easy</span>
         </h1>
         <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-          Powered by advanced AI technology, TextExtract Pro converts images to editable text with 99.9% accuracy. 
-          Perfect for documents, screenshots, handwritten notes, and more.
+          Upload an image and extract all text content. View the original image on the left and edit the extracted text on the right.
         </p>
       </div>
 
-      {/* Photo Extractor Component */}
+      {/* Simple Text Extractor Component */}
       <div className="mb-16">
-        <PhotoExtractor />
+        <SimpleTextExtractor />
       </div>
 
       {/* Features Grid */}
