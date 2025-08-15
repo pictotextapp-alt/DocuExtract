@@ -361,7 +361,7 @@ const CanvaTextEditor = ({ originalImage, textRegions, textLines, cleanedImage: 
               
               {cleanedImage && textLayers.length > 0 && (
                 <Button 
-                  onClick={handleExportImage}
+                  onClick={handleExport}
                   disabled={exportMutation.isPending}
                   data-testid="button-export"
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-semibold"
