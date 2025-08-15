@@ -14,8 +14,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const useFiltering = req.body.useFiltering === 'true';
       
+      // Check file size and compress if necessary
+      let processedBuffer = req.file.buffer;
+      const fileSizeKB = req.file.buffer.length / 1024;
+      
+      if (fileSizeKB > 900) { // Compress if close to 1MB limit
+        processedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
+      }
+      
       // Convert buffer to base64
-      const base64Image = req.file.buffer.toString('base64');
+      const base64Image = processedBuffer.toString('base64');
       const mimeType = req.file.mimetype;
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
@@ -110,6 +118,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = cleanLines.slice(0, 20).join('\n').trim(); // Increased limit to 20 lines
     console.log("Filtered result:", result);
     return result;
+  }
+
+  async function compressImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const { createCanvas, loadImage } = require('canvas');
+      
+      loadImage(buffer).then((img: any) => {
+        // Calculate new dimensions to keep under 900KB
+        let { width, height } = img;
+        const maxDimension = 1200;
+        
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Try different quality levels until under 900KB
+        let quality = 0.8;
+        let compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
+        
+        while (compressedBuffer.length > 900 * 1024 && quality > 0.3) {
+          quality -= 0.1;
+          compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
+        }
+        
+        resolve(compressedBuffer);
+      }).catch(reject);
+    });
   }
 
   const httpServer = createServer(app);
