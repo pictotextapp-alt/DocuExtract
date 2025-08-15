@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import AdvancedTextEditor from "./advanced-text-editor";
+import CanvaTextEditor from "./canva-text-editor";
 import type { OCRRequest, OCRResponse, TextRegion, TextLayer } from "@shared/schema";
 
 const PhotoExtractor = () => {
@@ -44,12 +44,12 @@ const PhotoExtractor = () => {
         setWordCount(data.words);
         setShowResult(true);
         
-        // Enable advanced editor if we have text regions with coordinates
+        // Enable Canva-style editor if we have text regions with coordinates
         if (data.textRegions && data.textRegions.length > 0) {
           setShowAdvancedEditor(true);
           toast({
-            title: "Text extraction complete",
-            description: `Successfully detected ${data.words} words in ${data.textRegions.length} regions. Ready for advanced editing.`,
+            title: "Text detection complete",
+            description: `Found ${data.words} words in ${data.textRegions.length} regions. Click "Grab Text" to make them editable.`,
           });
         } else {
           setShowAdvancedEditor(false);
@@ -407,9 +407,9 @@ const PhotoExtractor = () => {
             </CardContent>
           </Card>
 
-          {/* Advanced Text Editor */}
+          {/* Canva-Style Text Editor */}
           {showAdvancedEditor && textRegions.length > 0 && (
-            <AdvancedTextEditor
+            <CanvaTextEditor
               originalImage={imagePreview}
               textRegions={textRegions}
               onTextLayersChange={setTextLayers}

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { ocrRequestSchema, imageEditRequestSchema, inpaintRequestSchema, type OCRResponse, type ImageEditResponse, type InpaintResponse, type TextRegion } from "@shared/schema";
+import { ocrRequestSchema, imageEditRequestSchema, inpaintRequestSchema, exportRequestSchema, type OCRResponse, type ImageEditResponse, type InpaintResponse, type ExportResponse, type TextRegion, type TextLayer } from "@shared/schema";
 
 // Advanced content-aware inpainting function
 function inpaintRegion(ctx: any, region: TextRegion, surroundingData: any, offsetX: number, offsetY: number) {
@@ -297,6 +297,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const errorResult: InpaintResponse = {
         cleanedImage: "",
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+      };
+      
+      res.status(500).json(errorResult);
+    }
+  });
+
+  // Export functionality - merges text layers back onto cleaned image (Canva-style export)
+  app.post("/api/export-image", async (req, res) => {
+    try {
+      console.log("Export request received...");
+      const { cleanedImage, textLayers, format, quality } = exportRequestSchema.parse(req.body);
+      
+      const { createCanvas, loadImage, registerFont } = await import('canvas');
+      
+      // Load the cleaned background image
+      const base64Data = cleanedImage.replace(/^data:image\/[a-z]+;base64,/, "");
+      const imgBuffer = Buffer.from(base64Data, 'base64');
+      const img = await loadImage(imgBuffer);
+      
+      // Create canvas with same dimensions
+      const canvas = createCanvas(img.width, img.height);
+      const ctx = canvas.getContext('2d');
+      
+      // Draw the cleaned background
+      ctx.drawImage(img, 0, 0);
+      
+      // Sort text layers by zIndex for proper layering
+      const sortedLayers = textLayers
+        .filter(layer => layer.isVisible)
+        .sort((a, b) => a.zIndex - b.zIndex);
+      
+      // Render each text layer
+      sortedLayers.forEach(layer => {
+        if (!layer.text.trim()) return;
+        
+        ctx.save();
+        
+        // Apply transformations
+        const centerX = layer.x + layer.width / 2;
+        const centerY = layer.y + layer.height / 2;
+        
+        ctx.translate(centerX, centerY);
+        ctx.rotate((layer.rotation * Math.PI) / 180);
+        ctx.globalAlpha = layer.opacity;
+        
+        // Set up text properties
+        const fontWeight = layer.fontWeight || '400';
+        const fontStyle = layer.fontStyle || 'normal';
+        const fontSize = layer.fontSize || 16;
+        const fontFamily = layer.fontFamily || 'Arial';
+        
+        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+        ctx.textAlign = (layer.textAlign as CanvasTextAlign) || 'left';
+        ctx.textBaseline = 'middle';
+        
+        // Apply text styling
+        ctx.fillStyle = layer.color || '#000000';
+        ctx.strokeStyle = layer.borderColor || 'transparent';
+        ctx.lineWidth = layer.borderWidth || 0;
+        
+        // Handle background
+        if (layer.backgroundColor && layer.backgroundColor !== 'transparent') {
+          ctx.fillStyle = layer.backgroundColor;
+          ctx.fillRect(
+            -layer.width / 2,
+            -layer.height / 2,
+            layer.width,
+            layer.height
+          );
+        }
+        
+        // Apply shadow if specified
+        if (layer.shadow && layer.shadow !== 'none') {
+          // Parse shadow (simple format: "2px 2px 4px rgba(0,0,0,0.5)")
+          const shadowParts = layer.shadow.split(' ');
+          if (shadowParts.length >= 4) {
+            ctx.shadowOffsetX = parseInt(shadowParts[0]) || 0;
+            ctx.shadowOffsetY = parseInt(shadowParts[1]) || 0;
+            ctx.shadowBlur = parseInt(shadowParts[2]) || 0;
+            ctx.shadowColor = shadowParts.slice(3).join(' ') || 'rgba(0,0,0,0.5)';
+          }
+        }
+        
+        // Draw text
+        ctx.fillStyle = layer.color || '#000000';
+        
+        // Handle multi-line text
+        const lines = layer.text.split('\n');
+        const lineHeight = (layer.lineHeight || 1.2) * fontSize;
+        const totalHeight = lines.length * lineHeight;
+        const startY = -totalHeight / 2 + lineHeight / 2;
+        
+        lines.forEach((line, index) => {
+          const y = startY + index * lineHeight;
+          
+          // Apply letter spacing if specified
+          if (layer.letterSpacing && layer.letterSpacing !== 0) {
+            let x = -layer.width / 2;
+            for (let i = 0; i < line.length; i++) {
+              ctx.fillText(line[i], x, y);
+              x += ctx.measureText(line[i]).width + layer.letterSpacing;
+            }
+          } else {
+            const x = layer.textAlign === 'center' ? 0 : 
+                     layer.textAlign === 'right' ? layer.width / 2 : 
+                     -layer.width / 2;
+            ctx.fillText(line, x, y);
+          }
+          
+          // Draw border if specified
+          if (layer.borderWidth && layer.borderWidth > 0) {
+            ctx.strokeText(line, layer.textAlign === 'center' ? 0 : -layer.width / 2, y);
+          }
+        });
+        
+        ctx.restore();
+      });
+      
+      // Convert to desired format
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : 
+                      format === 'webp' ? 'image/webp' : 'image/png';
+      const exportedImageData = canvas.toDataURL(mimeType, quality);
+      
+      const result: ExportResponse = {
+        exportedImage: exportedImageData,
+        success: true,
+      };
+      
+      console.log("Export completed successfully");
+      res.json(result);
+    } catch (error) {
+      console.error("Export error:", error);
+      
+      const errorResult: ExportResponse = {
+        exportedImage: "",
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred",
       };

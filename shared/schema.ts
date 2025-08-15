@@ -70,7 +70,7 @@ export const inpaintResponseSchema = z.object({
   error: z.string().optional(),
 });
 
-// Enhanced text layer schema for DOM-based editing
+// Enhanced text layer schema for DOM-based editing (Canva-style)
 export const textLayerSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -81,10 +81,37 @@ export const textLayerSchema = z.object({
   height: z.number(),
   fontSize: z.number(),
   fontFamily: z.string().default("Arial"),
+  fontWeight: z.string().default("400"),
+  fontStyle: z.string().default("normal"),
+  textAlign: z.string().default("left"),
+  lineHeight: z.number().default(1.2),
+  letterSpacing: z.number().default(0),
   color: z.string().default("#000000"),
+  backgroundColor: z.string().default("transparent"),
+  borderColor: z.string().default("transparent"),
+  borderWidth: z.number().default(0),
+  borderRadius: z.number().default(0),
+  padding: z.number().default(0),
+  shadow: z.string().default("none"),
+  opacity: z.number().default(1),
   isVisible: z.boolean().default(true),
   isEdited: z.boolean().default(false),
   rotation: z.number().default(0),
+  zIndex: z.number().default(1),
+});
+
+// Export functionality schemas
+export const exportRequestSchema = z.object({
+  cleanedImage: z.string().min(1, "Cleaned image data is required"),
+  textLayers: z.array(textLayerSchema),
+  format: z.enum(["png", "jpeg", "webp"]).default("png"),
+  quality: z.number().min(0.1).max(1).default(0.9),
+});
+
+export const exportResponseSchema = z.object({
+  exportedImage: z.string(),
+  success: z.boolean(),
+  error: z.string().optional(),
 });
 
 export type OCRRequest = z.infer<typeof ocrRequestSchema>;
@@ -95,3 +122,5 @@ export type ImageEditResponse = z.infer<typeof imageEditResponseSchema>;
 export type InpaintRequest = z.infer<typeof inpaintRequestSchema>;
 export type InpaintResponse = z.infer<typeof inpaintResponseSchema>;
 export type TextLayer = z.infer<typeof textLayerSchema>;
+export type ExportRequest = z.infer<typeof exportRequestSchema>;
+export type ExportResponse = z.infer<typeof exportResponseSchema>;
