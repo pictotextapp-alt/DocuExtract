@@ -14,12 +14,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const useFiltering = req.body.useFiltering === 'true';
       
-      // Check file size and compress if necessary
+      // Check file size and compress if necessary, also apply preprocessing
       let processedBuffer = req.file.buffer;
       const fileSizeKB = req.file.buffer.length / 1024;
       
       if (fileSizeKB > 900) { // Compress if close to 1MB limit
         processedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
+      } else {
+        // Apply image preprocessing for better OCR accuracy
+        processedBuffer = await preprocessImage(req.file.buffer, req.file.mimetype);
       }
       
       // Convert buffer to base64
@@ -27,14 +30,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mimeType = req.file.mimetype;
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-      // Prepare OCR.space API request
+      // Prepare OCR.space API request with enhanced settings
       const formData = new FormData();
       formData.append("base64Image", dataUrl);
       formData.append("language", "eng");
-      formData.append("OCREngine", "2");
-      formData.append("detectOrientation", "false");
+      formData.append("OCREngine", "2"); // Engine 2 is more accurate
+      formData.append("detectOrientation", "true"); // Enable orientation detection
       formData.append("scale", "true");
       formData.append("isOverlayRequired", "false");
+      formData.append("isTable", "true"); // Better structure detection
+      formData.append("filetype", "jpg");
       
       const response = await fetch("https://api.ocr.space/parse/image", {
         method: "POST",
@@ -55,7 +60,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
-      const confidence = 85; // Default confidence since OCR.space doesn't provide this reliably
+      
+      // Calculate confidence based on text quality indicators
+      const confidence = calculateConfidence(extractedText, ocrResult);
       
       // Apply filtering if requested
       let filteredText = extractedText;
@@ -137,6 +144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const canvas = createCanvas(width, height);
         const ctx = canvas.getContext('2d');
+        
+        // Apply preprocessing while compressing
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+        ctx.imageSmoothingEnabled = false; // Better for text
         ctx.drawImage(img, 0, 0, width, height);
         
         // Try different quality levels until under 900KB
@@ -151,6 +163,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resolve(compressedBuffer);
       }).catch(reject);
     });
+  }
+
+  async function preprocessImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const { createCanvas, loadImage } = require('canvas');
+      
+      loadImage(buffer).then((img: any) => {
+        const { width, height } = img;
+        
+        // Create canvas with slight upscaling for better OCR
+        const scale = Math.min(2.0, Math.max(1.2, 1600 / Math.max(width, height)));
+        const newWidth = Math.floor(width * scale);
+        const newHeight = Math.floor(height * scale);
+        
+        const canvas = createCanvas(newWidth, newHeight);
+        const ctx = canvas.getContext('2d');
+        
+        // White background for better contrast
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, newWidth, newHeight);
+        
+        // High quality scaling for text
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+        
+        // Enhance contrast slightly
+        const imageData = ctx.getImageData(0, 0, newWidth, newHeight);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          // Simple contrast enhancement
+          const factor = 1.1;
+          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));     // R
+          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128)); // G
+          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128)); // B
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        const processedBuffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
+        resolve(processedBuffer);
+      }).catch(reject);
+    });
+  }
+
+  function calculateConfidence(text: string, ocrResult: any): number {
+    if (!text || text.length === 0) return 0;
+    
+    // Base confidence factors
+    let confidence = 75; // Start with base confidence
+    
+    // Factor 1: Text length and structure
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount > 10) confidence += 5;
+    if (wordCount > 30) confidence += 5;
+    
+    // Factor 2: Proper word ratio
+    const properWords = text.match(/\b[A-Za-z]{3,}\b/g) || [];
+    const totalTokens = text.split(/\s+/).length;
+    const properWordRatio = properWords.length / Math.max(1, totalTokens);
+    confidence += Math.floor(properWordRatio * 15);
+    
+    // Factor 3: Presence of readable sentences
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    if (sentences.length > 0) confidence += 5;
+    if (sentences.length > 2) confidence += 5;
+    
+    // Factor 4: Low symbol noise
+    const symbolRatio = (text.match(/[^\w\s]/g) || []).length / text.length;
+    if (symbolRatio < 0.1) confidence += 10;
+    else if (symbolRatio < 0.2) confidence += 5;
+    
+    // Factor 5: Proper capitalization patterns
+    const capitalizedWords = text.match(/\b[A-Z][a-z]+/g) || [];
+    if (capitalizedWords.length > 0) confidence += 5;
+    
+    return Math.min(99, Math.max(50, confidence));
   }
 
   const httpServer = createServer(app);
