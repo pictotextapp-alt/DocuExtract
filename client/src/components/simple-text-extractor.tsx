@@ -21,39 +21,51 @@ const SimpleTextExtractor = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const compressImage = (file: File): Promise<string> => {
+  const preprocessImageForOCR = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
       const img = new Image();
       
       img.onload = () => {
-        // Calculate new dimensions to keep under 800KB
+        // Scale up for better OCR accuracy
         let { width, height } = img;
-        const maxDimension = 1200; // Reasonable max size for OCR
+        const scaleFactor = 2; // Scale up 2x for better text recognition
         
-        if (width > maxDimension || height > maxDimension) {
-          const ratio = Math.min(maxDimension / width, maxDimension / height);
-          width *= ratio;
-          height *= ratio;
+        canvas.width = width * scaleFactor;
+        canvas.height = height * scaleFactor;
+        
+        // Enable image smoothing for better text rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Draw scaled image
+        ctx.drawImage(img, 0, 0, width * scaleFactor, height * scaleFactor);
+        
+        // Get image data for preprocessing
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Apply contrast enhancement and convert to grayscale
+        for (let i = 0; i < data.length; i += 4) {
+          // Convert to grayscale using luminance formula
+          const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+          
+          // Apply contrast enhancement - make text darker, background lighter
+          const enhanced = gray < 128 ? Math.max(0, gray - 40) : Math.min(255, gray + 40);
+          
+          data[i] = enhanced;     // Red
+          data[i + 1] = enhanced; // Green  
+          data[i + 2] = enhanced; // Blue
+          // Alpha remains unchanged
         }
         
-        canvas.width = width;
-        canvas.height = height;
+        // Put the processed image data back
+        ctx.putImageData(imageData, 0, 0);
         
-        // Draw and compress
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Try different quality levels until under 800KB
-        let quality = 0.8;
-        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        
-        while (compressedDataUrl.length > 800 * 1024 && quality > 0.1) {
-          quality -= 0.1;
-          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        }
-        
-        resolve(compressedDataUrl);
+        // Convert to high-quality PNG for better OCR
+        const processedDataUrl = canvas.toDataURL('image/png');
+        resolve(processedDataUrl);
       };
       
       const reader = new FileReader();
@@ -89,9 +101,9 @@ const SimpleTextExtractor = () => {
     setSelectedImage(file);
     
     try {
-      // Compress image for OCR processing
-      const compressedImage = await compressImage(file);
-      setImagePreview(compressedImage);
+      // Preprocess image for better OCR accuracy
+      const processedImage = await preprocessImageForOCR(file);
+      setImagePreview(processedImage);
       
       // Reset previous results
       setExtractedText("");
@@ -216,6 +228,13 @@ const SimpleTextExtractor = () => {
       // Store raw text and apply filtering
       setRawText(text);
       console.log("Raw OCR text:", text);
+      
+      // If OCR failed badly (mostly symbols/gibberish), try a fallback approach
+      const hasRealWords = text.match(/[a-zA-Z]{3,}/g);
+      const symbolRatio = (text.match(/[<>|\\()=]/g) || []).length / text.length;
+      
+      console.log("Real words found:", hasRealWords);
+      console.log("Symbol ratio:", symbolRatio);
       
       const filteredText = filterText(text);
       console.log("Filtered text:", filteredText);
