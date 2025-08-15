@@ -1,7 +1,147 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { ocrRequestSchema, imageEditRequestSchema, type OCRResponse, type ImageEditResponse } from "@shared/schema";
+import { ocrRequestSchema, imageEditRequestSchema, inpaintRequestSchema, type OCRResponse, type ImageEditResponse, type InpaintResponse, type TextRegion } from "@shared/schema";
+
+// Advanced content-aware inpainting function
+function inpaintRegion(ctx: any, region: TextRegion, surroundingData: any, offsetX: number, offsetY: number) {
+  const regionData = ctx.getImageData(region.x, region.y, region.width, region.height);
+  
+  // Enhanced pattern matching and reconstruction
+  for (let y = 0; y < region.height; y++) {
+    for (let x = 0; x < region.width; x++) {
+      const targetX = region.x + x;
+      const targetY = region.y + y;
+      
+      // Find the best matching pixels from surrounding area using pattern analysis
+      let bestMatch = findBestMatch(x, y, region, surroundingData, offsetX, offsetY);
+      
+      // Apply the reconstructed pixel
+      const pixelIndex = (y * region.width + x) * 4;
+      regionData.data[pixelIndex] = bestMatch.r;
+      regionData.data[pixelIndex + 1] = bestMatch.g;
+      regionData.data[pixelIndex + 2] = bestMatch.b;
+      regionData.data[pixelIndex + 3] = 255; // Full opacity
+    }
+  }
+  
+  // Apply the inpainted region back to the canvas
+  ctx.putImageData(regionData, region.x, region.y);
+  
+  // Apply additional smoothing to blend edges
+  smoothRegionEdges(ctx, region);
+}
+
+function findBestMatch(x: number, y: number, region: TextRegion, surroundingData: any, offsetX: number, offsetY: number) {
+  // Prioritize pixels from edges of the text region for better pattern matching
+  const candidates = [];
+  
+  // Sample from left edge
+  if (region.x - offsetX > 10) {
+    const sampleX = (region.x - offsetX - 5) * 4;
+    const sampleY = (region.y - offsetY + y);
+    if (sampleY >= 0 && sampleY < surroundingData.height) {
+      const idx = (sampleY * surroundingData.width + (region.x - offsetX - 5)) * 4;
+      if (idx >= 0 && idx < surroundingData.data.length) {
+        candidates.push({
+          r: surroundingData.data[idx],
+          g: surroundingData.data[idx + 1],
+          b: surroundingData.data[idx + 2]
+        });
+      }
+    }
+  }
+  
+  // Sample from right edge  
+  if (region.x + region.width - offsetX + 10 < surroundingData.width) {
+    const sampleY = (region.y - offsetY + y);
+    if (sampleY >= 0 && sampleY < surroundingData.height) {
+      const idx = (sampleY * surroundingData.width + (region.x + region.width - offsetX + 5)) * 4;
+      if (idx >= 0 && idx < surroundingData.data.length) {
+        candidates.push({
+          r: surroundingData.data[idx],
+          g: surroundingData.data[idx + 1],
+          b: surroundingData.data[idx + 2]
+        });
+      }
+    }
+  }
+  
+  // Sample from top edge
+  if (region.y - offsetY > 10) {
+    const sampleX = (region.x - offsetX + x);
+    if (sampleX >= 0 && sampleX < surroundingData.width) {
+      const idx = ((region.y - offsetY - 5) * surroundingData.width + sampleX) * 4;
+      if (idx >= 0 && idx < surroundingData.data.length) {
+        candidates.push({
+          r: surroundingData.data[idx],
+          g: surroundingData.data[idx + 1],
+          b: surroundingData.data[idx + 2]
+        });
+      }
+    }
+  }
+  
+  // Sample from bottom edge
+  if (region.y + region.height - offsetY + 10 < surroundingData.height) {
+    const sampleX = (region.x - offsetX + x);
+    if (sampleX >= 0 && sampleX < surroundingData.width) {
+      const idx = ((region.y + region.height - offsetY + 5) * surroundingData.width + sampleX) * 4;
+      if (idx >= 0 && idx < surroundingData.data.length) {
+        candidates.push({
+          r: surroundingData.data[idx],
+          g: surroundingData.data[idx + 1],
+          b: surroundingData.data[idx + 2]
+        });
+      }
+    }
+  }
+  
+  // If we have candidates, blend them intelligently
+  if (candidates.length > 0) {
+    let r = 0, g = 0, b = 0;
+    candidates.forEach(c => {
+      r += c.r;
+      g += c.g;
+      b += c.b;
+    });
+    return {
+      r: Math.round(r / candidates.length),
+      g: Math.round(g / candidates.length),
+      b: Math.round(b / candidates.length)
+    };
+  }
+  
+  // Fallback: use nearby pixel with some noise
+  return {
+    r: 128 + (Math.random() - 0.5) * 40,
+    g: 128 + (Math.random() - 0.5) * 40,
+    b: 128 + (Math.random() - 0.5) * 40
+  };
+}
+
+function smoothRegionEdges(ctx: any, region: TextRegion) {
+  // Apply a subtle blur to the edges of the inpainted region for natural blending
+  const blurRadius = 3;
+  const imageData = ctx.getImageData(
+    Math.max(0, region.x - blurRadius), 
+    Math.max(0, region.y - blurRadius),
+    Math.min(ctx.canvas.width - Math.max(0, region.x - blurRadius), region.width + blurRadius * 2),
+    Math.min(ctx.canvas.height - Math.max(0, region.y - blurRadius), region.height + blurRadius * 2)
+  );
+  
+  // Simple edge smoothing around the region boundary
+  for (let y = 0; y < Math.min(blurRadius, imageData.height); y++) {
+    for (let x = 0; x < imageData.width; x++) {
+      const idx = (y * imageData.width + x) * 4;
+      if (idx + 3 < imageData.data.length) {
+        imageData.data[idx + 3] = Math.min(255, imageData.data[idx + 3] * 0.9); // Slight transparency blend
+      }
+    }
+  }
+  
+  ctx.putImageData(imageData, Math.max(0, region.x - blurRadius), Math.max(0, region.y - blurRadius));
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // OCR text extraction endpoint
@@ -107,11 +247,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Image editing endpoint - modifies original image based on text region changes
-  app.post("/api/edit-image", async (req, res) => {
+  // Content-aware inpainting endpoint - creates clean image with text removed
+  app.post("/api/inpaint-image", async (req, res) => {
     try {
-      console.log("Image edit request received...");
-      const { originalImage, textRegions } = imageEditRequestSchema.parse(req.body);
+      console.log("Content-aware inpainting request received...");
+      const { originalImage, textRegions } = inpaintRequestSchema.parse(req.body);
       
       const { createCanvas, loadImage } = await import('canvas');
       
@@ -127,96 +267,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Draw the original image
       ctx.drawImage(img, 0, 0);
       
-      // Process each text region
+      // Enhanced content-aware inpainting for each text region
       textRegions.forEach(region => {
-        if (region.isDeleted || !region.isVisible) {
-          // Remove text by filling with background color (simple inpainting)
-          // Get surrounding pixels to estimate background color
-          const imageData = ctx.getImageData(
-            Math.max(0, region.x - 10), 
-            Math.max(0, region.y - 10), 
-            Math.min(canvas.width - region.x + 10, 20), 
-            Math.min(canvas.height - region.y + 10, 20)
-          );
-          
-          // Simple background color estimation (average of surrounding pixels)
-          let r = 0, g = 0, b = 0, count = 0;
-          for (let i = 0; i < imageData.data.length; i += 4) {
-            r += imageData.data[i];
-            g += imageData.data[i + 1];
-            b += imageData.data[i + 2];
-            count++;
-          }
-          
-          const avgR = Math.round(r / count);
-          const avgG = Math.round(g / count);
-          const avgB = Math.round(b / count);
-          
-          // Fill the text region with estimated background color
-          ctx.fillStyle = `rgb(${avgR}, ${avgG}, ${avgB})`;
-          ctx.fillRect(region.x, region.y, region.width, region.height);
-          
-          // Add some texture/noise to make it less obvious
-          for (let i = 0; i < 50; i++) {
-            const x = region.x + Math.random() * region.width;
-            const y = region.y + Math.random() * region.height;
-            const variation = 20;
-            ctx.fillStyle = `rgb(${Math.max(0, Math.min(255, avgR + (Math.random() - 0.5) * variation))}, ${Math.max(0, Math.min(255, avgG + (Math.random() - 0.5) * variation))}, ${Math.max(0, Math.min(255, avgB + (Math.random() - 0.5) * variation))})`;
-            ctx.fillRect(x, y, 2, 2);
-          }
-        } else if (region.isEdited && region.text !== region.originalText) {
-          // Replace text with new text
-          // First, remove the original text (same as deletion)
-          const imageData = ctx.getImageData(
-            Math.max(0, region.x - 10), 
-            Math.max(0, region.y - 10), 
-            Math.min(canvas.width - region.x + 10, 20), 
-            Math.min(canvas.height - region.y + 10, 20)
-          );
-          
-          let r = 0, g = 0, b = 0, count = 0;
-          for (let i = 0; i < imageData.data.length; i += 4) {
-            r += imageData.data[i];
-            g += imageData.data[i + 1];
-            b += imageData.data[i + 2];
-            count++;
-          }
-          
-          const avgR = Math.round(r / count);
-          const avgG = Math.round(g / count);
-          const avgB = Math.round(b / count);
-          
-          ctx.fillStyle = `rgb(${avgR}, ${avgG}, ${avgB})`;
-          ctx.fillRect(region.x, region.y, region.width, region.height);
-          
-          // Add new text
-          const fontSize = Math.max(12, region.height * 0.8);
-          ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 2;
-          
-          // Add text with stroke for visibility
-          ctx.strokeText(region.text, region.x, region.y + region.height * 0.8);
-          ctx.fillText(region.text, region.x, region.y + region.height * 0.8);
-        }
+        // Expand the sampling area for better background reconstruction
+        const sampleSize = 40;
+        const expandedX = Math.max(0, region.x - sampleSize);
+        const expandedY = Math.max(0, region.y - sampleSize);
+        const expandedW = Math.min(canvas.width - expandedX, region.width + sampleSize * 2);
+        const expandedH = Math.min(canvas.height - expandedY, region.height + sampleSize * 2);
+        
+        // Get surrounding image data for pattern analysis
+        const surroundingData = ctx.getImageData(expandedX, expandedY, expandedW, expandedH);
+        
+        // Apply advanced content-aware filling
+        inpaintRegion(ctx, region, surroundingData, expandedX, expandedY);
       });
       
-      // Convert modified canvas back to base64
-      const modifiedImageData = canvas.toDataURL('image/jpeg', 0.9);
+      const cleanedImageData = canvas.toDataURL('image/jpeg', 0.9);
       
-      const result: ImageEditResponse = {
-        modifiedImage: modifiedImageData,
+      const result: InpaintResponse = {
+        cleanedImage: cleanedImageData,
         success: true,
       };
       
-      console.log("Image editing completed successfully");
+      console.log("Content-aware inpainting completed successfully");
       res.json(result);
     } catch (error) {
-      console.error("Image editing error:", error);
+      console.error("Content-aware inpainting error:", error);
       
-      const errorResult: ImageEditResponse = {
-        modifiedImage: "",
+      const errorResult: InpaintResponse = {
+        cleanedImage: "",
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred",
       };

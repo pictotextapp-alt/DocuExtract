@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import InteractiveTextOverlay from "./interactive-text-overlay";
-import type { OCRRequest, OCRResponse, TextRegion, ImageEditRequest, ImageEditResponse } from "@shared/schema";
+import AdvancedTextEditor from "./advanced-text-editor";
+import type { OCRRequest, OCRResponse, TextRegion, TextLayer } from "@shared/schema";
 
 const PhotoExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -13,11 +13,10 @@ const PhotoExtractor = () => {
   const [extractedText, setExtractedText] = useState("");
   const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [showInteractiveMode, setShowInteractiveMode] = useState(false);
-  const [showFinalText, setShowFinalText] = useState(false);
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
-  const [modifiedImageUrl, setModifiedImageUrl] = useState<string>("");
+  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -45,15 +44,15 @@ const PhotoExtractor = () => {
         setWordCount(data.words);
         setShowResult(true);
         
-        // Enable interactive mode if we have text regions with coordinates
+        // Enable advanced editor if we have text regions with coordinates
         if (data.textRegions && data.textRegions.length > 0) {
-          setShowInteractiveMode(true);
+          setShowAdvancedEditor(true);
           toast({
-            title: "Interactive text extraction complete",
-            description: `Successfully extracted ${data.words} words with ${data.textRegions.length} editable regions.`,
+            title: "Text extraction complete",
+            description: `Successfully detected ${data.words} words in ${data.textRegions.length} regions. Ready for advanced editing.`,
           });
         } else {
-          setShowInteractiveMode(false);
+          setShowAdvancedEditor(false);
           toast({
             title: "Text extraction complete",
             description: `Successfully extracted ${data.words} words from your image.`,
@@ -77,46 +76,7 @@ const PhotoExtractor = () => {
     },
   });
 
-  const editImageMutation = useMutation({
-    mutationFn: async (imageEditRequest: ImageEditRequest): Promise<ImageEditResponse> => {
-      const response = await fetch("/api/edit-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(imageEditRequest),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data: ImageEditResponse) => {
-      if (data.success) {
-        setModifiedImageUrl(data.modifiedImage);
-        toast({
-          title: "Image processing complete",
-          description: "Your changes have been applied to the original image.",
-        });
-      } else {
-        toast({
-          title: "Image processing failed",
-          description: data.error || "Failed to apply changes to the image.",
-          variant: "destructive",
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Processing error",
-        description: "An error occurred while processing your image. Please try again.",
-        variant: "destructive",
-      });
-      console.error("Image processing error:", error);
-    },
-  });
+
 
   const handleFileSelect = (file: File | null) => {
     if (!file) return;
@@ -147,9 +107,8 @@ const PhotoExtractor = () => {
     setShowResult(false);
     setExtractedText("");
     setTextRegions([]);
-    setShowInteractiveMode(false);
-    setShowFinalText(false);
-    setModifiedImageUrl("");
+    setShowAdvancedEditor(false);
+    setTextLayers([]);
 
     // Create optimized preview
     const reader = new FileReader();
@@ -250,11 +209,10 @@ const PhotoExtractor = () => {
     setExtractedText("");
     setTextRegions([]);
     setShowResult(false);
-    setShowInteractiveMode(false);
-    setShowFinalText(false);
+    setShowAdvancedEditor(false);
+    setTextLayers([]);
     setConfidence(0);
     setWordCount(0);
-    setModifiedImageUrl("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -380,67 +338,8 @@ const PhotoExtractor = () => {
       {/* Results View */}
       {showResult && (
         <div className="space-y-6">
-          {/* Interactive Text Overlay Mode */}
-          {showInteractiveMode && textRegions.length > 0 ? (
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    <i className="fas fa-edit text-blue-600 mr-2"></i>Interactive Text Editor
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearImage}
-                    data-testid="button-start-over"
-                  >
-                    <i className="fas fa-plus mr-2"></i>Upload New
-                  </Button>
-                </div>
-                <InteractiveTextOverlay
-                  imageUrl={imagePreview}
-                  textRegions={textRegions}
-                  onTextRegionsChange={handleTextRegionsChange}
-                  onApplyChanges={handleApplyChanges}
-                  modifiedImageUrl={modifiedImageUrl}
-                  isProcessing={editImageMutation.isPending}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            /* Original Simple Mode */
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      <i className="fas fa-image text-blue-600 mr-2"></i>Original Image
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearImage}
-                      data-testid="button-start-over"
-                    >
-                      <i className="fas fa-plus mr-2"></i>Upload New
-                    </Button>
-                  </div>
-                  <div className="bg-slate-100 rounded-lg p-4 flex items-center justify-center">
-                    <img
-                      src={imagePreview}
-                      alt="Original image"
-                      className="max-w-full max-h-96 object-contain rounded-lg shadow-md"
-                      data-testid="original-image"
-                    />
-                  </div>
-                  <div className="mt-4 text-sm text-slate-600 text-center">
-                    {selectedImage?.name} ({((selectedImage?.size || 0) / 1024 / 1024).toFixed(2)} MB)
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Extracted Text */}
-              <Card>
+          {/* Simple Text Display */}
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-slate-900">
@@ -473,10 +372,18 @@ const PhotoExtractor = () => {
                   >
                     <i className="fas fa-download"></i>
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearImage}
+                    data-testid="button-start-over"
+                  >
+                    <i className="fas fa-plus mr-2"></i>Upload New
+                  </Button>
                 </div>
               </div>
               <Textarea
-                className="min-h-96 resize-none font-mono"
+                className="min-h-48 resize-none font-mono"
                 placeholder="Extracted text will appear here..."
                 value={extractedText}
                 onChange={(e) => setExtractedText(e.target.value)}
@@ -499,10 +406,15 @@ const PhotoExtractor = () => {
               </div>
             </CardContent>
           </Card>
-            </div>
+
+          {/* Advanced Text Editor */}
+          {showAdvancedEditor && textRegions.length > 0 && (
+            <AdvancedTextEditor
+              originalImage={imagePreview}
+              textRegions={textRegions}
+              onTextLayersChange={setTextLayers}
+            />
           )}
-
-
         </div>
       )}
     </div>

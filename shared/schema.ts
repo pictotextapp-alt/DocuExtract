@@ -58,8 +58,40 @@ export const imageEditResponseSchema = z.object({
   error: z.string().optional(),
 });
 
+// New schema for content-aware inpainting
+export const inpaintRequestSchema = z.object({
+  originalImage: z.string().min(1, "Original image data is required"),
+  textRegions: z.array(textRegionSchema), // Regions to remove with inpainting
+});
+
+export const inpaintResponseSchema = z.object({
+  cleanedImage: z.string(), // Image with text removed via content-aware inpainting
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+
+// Enhanced text layer schema for DOM-based editing
+export const textLayerSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  originalText: z.string(),
+  x: z.number(), // Position relative to image
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  fontSize: z.number(),
+  fontFamily: z.string().default("Arial"),
+  color: z.string().default("#000000"),
+  isVisible: z.boolean().default(true),
+  isEdited: z.boolean().default(false),
+  rotation: z.number().default(0),
+});
+
 export type OCRRequest = z.infer<typeof ocrRequestSchema>;
 export type OCRResponse = z.infer<typeof ocrResponseSchema>;
 export type TextRegion = z.infer<typeof textRegionSchema>;
 export type ImageEditRequest = z.infer<typeof imageEditRequestSchema>;
 export type ImageEditResponse = z.infer<typeof imageEditResponseSchema>;
+export type InpaintRequest = z.infer<typeof inpaintRequestSchema>;
+export type InpaintResponse = z.infer<typeof inpaintResponseSchema>;
+export type TextLayer = z.infer<typeof textLayerSchema>;
