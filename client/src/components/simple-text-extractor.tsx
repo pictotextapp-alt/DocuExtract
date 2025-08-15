@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, Copy, Filter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import Tesseract from "tesseract.js";
+
 
 const SimpleTextExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -17,7 +17,7 @@ const SimpleTextExtractor = () => {
   const [wordCount, setWordCount] = useState(0);
   const [rawText, setRawText] = useState("");
   const [useFiltering, setUseFiltering] = useState(true);
-  const [ocrProgress, setOcrProgress] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -75,142 +75,57 @@ const SimpleTextExtractor = () => {
     }
   };
 
-  const filterText = (rawText: string): string => {
-    if (!useFiltering) return rawText;
-    
-    console.log("Filtering text:", rawText);
-    
-    // Check for OCR garbage - text with too many symbols or unreadable characters
-    const hasRealWords = rawText.match(/\b[A-Za-z]{3,}\b/g);
-    const weirdChars = (rawText.match(/[¥€£™®©§¶†‡•…‰′″‹›«»]/g) || []).length;
-    const symbolRatio = (rawText.match(/[^\w\s]/g) || []).length / rawText.length;
-    
-    console.log("Real words found:", hasRealWords);
-    console.log("Weird chars:", weirdChars);
-    console.log("Symbol ratio:", symbolRatio);
-    
-    // If OCR failed (few real words OR lots of weird symbols OR high symbol ratio)
-    if (!hasRealWords || hasRealWords.length < 2 || weirdChars > 2 || symbolRatio > 0.4) {
-      return "OCR could not extract readable text from this image.\n\nThe text appears to be too stylized, decorative, or low resolution for accurate recognition.\n\nTry using:\n• Plain text documents\n• Screenshots with simple fonts\n• High-contrast images\n• Less decorative text styles";
-    }
-    
-    // If we have some real words, clean up the text
-    const lines = rawText.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
-    
-    const cleanLines = lines.filter(line => {
-      const lowerLine = line.toLowerCase();
-      
-      // Skip social media UI elements
-      if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post)/i)) return false;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|manage|edit)/)) return false;
-      if (lowerLine.match(/@|\.com|www\.|http/)) return false;
-      
-      // Keep lines with at least some readable content
-      const readableWords = line.split(/\s+/).filter(word => word.match(/^[A-Za-z]{2,}$/));
-      return readableWords.length >= 1;
-    });
-    
-    return cleanLines.slice(0, 10).join('\n').trim();
-  };
 
-  const calculateSimilarity = (str1: string, str2: string): number => {
-    const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
-    
-    if (longer.length === 0) return 1.0;
-    
-    const editDistance = levenshteinDistance(longer, shorter);
-    return (longer.length - editDistance) / longer.length;
-  };
-
-  const levenshteinDistance = (str1: string, str2: string): number => {
-    const matrix = [];
-    
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-    
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-    
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-    
-    return matrix[str2.length][str1.length];
-  };
 
   const handleExtractText = async () => {
-    if (!imagePreview) return;
+    if (!selectedImage) return;
     
     setIsProcessing(true);
+    setExtractedText("");
+    setRawText("");
+    setConfidence(0);
+    setWordCount(0);
     
     try {
-      const { data: { text, confidence } } = await Tesseract.recognize(
-        imagePreview,
-        'eng',
-        {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              const progress = Math.round(m.progress * 100);
-              setOcrProgress(progress);
-              console.log(`OCR Progress: ${progress}%`);
-            }
-          }
-        }
-      );
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+      formData.append('useFiltering', useFiltering.toString());
+
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
       
-      // Store raw text and apply filtering
-      setRawText(text);
-      // Apply filtering
-      const filteredText = filterText(text);
-      
-      const finalText = (filteredText && filteredText.trim().length > 0) ? filteredText : text;
-      
-      const words = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
-      const confidencePercent = Math.round(confidence);
-      
-      setExtractedText(finalText);
-      setConfidence(confidencePercent);
-      setWordCount(words);
+      setRawText(result.rawText || "");
+      setExtractedText(result.extractedText);
+      setConfidence(result.confidence);
+      setWordCount(result.wordCount);
       
       toast({
         title: "Text extracted successfully!",
-        description: `Found ${words} words with ${confidencePercent}% confidence. ${useFiltering ? 'Clean Extract applied.' : 'Raw text extracted.'}`,
+        description: `Found ${result.wordCount} words with ${result.confidence}% confidence. ${useFiltering ? 'Clean Extract applied.' : 'Raw text extracted.'}`,
       });
       
     } catch (error) {
       toast({
         title: "Extraction failed",
-        description: error instanceof Error ? error.message : 'An error occurred during text extraction',
+        description: error instanceof Error ? error.message : 'Failed to extract text from the image. Please try again.',
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
-      setOcrProgress(0);
     }
   };
 
   const toggleFiltering = () => {
     setUseFiltering(!useFiltering);
-    if (rawText) {
-      // Re-apply filtering with new setting
-      const finalText = !useFiltering ? filterText(rawText) : rawText;
-      setExtractedText(finalText);
-      const words = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
-      setWordCount(words);
-    }
+    // User will need to re-extract text with new filtering setting
   };
 
   const handleCopyText = () => {
