@@ -143,10 +143,10 @@ const SimpleTextExtractor = () => {
           📄 Text Extractor
         </h1>
         <p className="text-lg text-slate-600">
-          Upload an image and extract all text content using Tesseract.js OCR
+          Upload an image and extract all text content using advanced OCR
         </p>
         <p className="text-sm text-slate-500">
-          Powered by Tesseract.js - runs entirely in your browser, no file limits
+          Powered by OCR.space API - professional-grade text recognition
         </p>
       </div>
 
