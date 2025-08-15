@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, Copy } from "lucide-react";
+import { Upload, FileText, Copy, Filter } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import Tesseract from "tesseract.js";
 
 const SimpleTextExtractor = () => {
@@ -13,6 +15,8 @@ const SimpleTextExtractor = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [wordCount, setWordCount] = useState(0);
+  const [rawText, setRawText] = useState("");
+  const [useFiltering, setUseFiltering] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -90,6 +94,7 @@ const SimpleTextExtractor = () => {
       
       // Reset previous results
       setExtractedText("");
+      setRawText("");
       setConfidence(0);
       setWordCount(0);
       
@@ -100,6 +105,40 @@ const SimpleTextExtractor = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const filterText = (rawText: string): string => {
+    if (!useFiltering) return rawText;
+    
+    const lines = rawText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Remove common UI elements and social media noise
+    const filteredLines = lines.filter(line => {
+      const lowerLine = line.toLowerCase();
+      
+      // Skip social media UI elements
+      if (lowerLine.match(/^\d+(\.\d+)?k?\s*(likes?|followers?|following|views?)/)) return false;
+      if (lowerLine.match(/^(like|share|comment|follow|subscribe|@|#)/)) return false;
+      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|photos?|more|manage)/)) return false;
+      if (lowerLine.match(/^(edit|bio|page|featured|live\s+video)/)) return false;
+      if (lowerLine.match(/^\w{2,4}\s+\d+$/)) return false; // Date patterns like "Jan 4"
+      if (lowerLine.match(/^[a-zA-Z]{1,3}\s+[a-zA-Z]{1,3}$/)) return false; // Short fragments
+      if (lowerLine.match(/^[\d\s\-\.\+\(\)]+$/)) return false; // Numbers/phone patterns
+      if (lowerLine.match(/^\w+@\w+\.\w+/)) return false; // Email addresses
+      if (lowerLine.match(/^https?:\/\//)) return false; // URLs
+      if (lowerLine.match(/^(©|®|™)/)) return false; // Copyright symbols
+      
+      // Skip very short lines (less than 3 words) unless they seem important
+      const wordCount = line.split(/\s+/).length;
+      if (wordCount < 3 && !lowerLine.match(/^(sale|free|new|hot|deal|offer|save)/)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Join meaningful content with proper spacing
+    return filteredLines.join('\n').trim();
   };
 
   const handleExtractText = async () => {
@@ -113,7 +152,6 @@ const SimpleTextExtractor = () => {
         'eng',
         {
           logger: m => {
-            // Optional: log progress for debugging
             if (m.status === 'recognizing text') {
               console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
             }
@@ -121,16 +159,21 @@ const SimpleTextExtractor = () => {
         }
       );
       
-      const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+      // Store raw text and apply filtering
+      setRawText(text);
+      const filteredText = filterText(text);
+      const finalText = filteredText || text; // Fallback to raw if filtering removes everything
+      
+      const words = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
       const confidencePercent = Math.round(confidence);
       
-      setExtractedText(text);
+      setExtractedText(finalText);
       setConfidence(confidencePercent);
       setWordCount(words);
       
       toast({
         title: "Text extracted successfully!",
-        description: `Found ${words} words with ${confidencePercent}% confidence.`,
+        description: `Found ${words} words with ${confidencePercent}% confidence. ${useFiltering ? 'Smart filtering applied.' : 'Raw text extracted.'}`,
       });
       
     } catch (error) {
@@ -141,6 +184,17 @@ const SimpleTextExtractor = () => {
       });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const toggleFiltering = () => {
+    setUseFiltering(!useFiltering);
+    if (rawText) {
+      // Re-apply filtering with new setting
+      const finalText = !useFiltering ? filterText(rawText) : rawText;
+      setExtractedText(finalText);
+      const words = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
+      setWordCount(words);
     }
   };
 
@@ -262,9 +316,23 @@ const SimpleTextExtractor = () => {
             <CardContent>
               <div className="space-y-4">
                 {confidence > 0 && (
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>Words: {wordCount}</span>
-                    <span>Confidence: {confidence}%</span>
+                  <div className="flex justify-between items-center text-sm text-slate-600">
+                    <div className="flex items-center gap-4">
+                      <span>Words: {wordCount}</span>
+                      <span>Confidence: {confidence}%</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="filter-mode"
+                        checked={useFiltering}
+                        onCheckedChange={toggleFiltering}
+                        data-testid="switch-filter"
+                      />
+                      <Label htmlFor="filter-mode" className="text-xs">
+                        <Filter className="h-3 w-3 inline mr-1" />
+                        Smart Filter
+                      </Label>
+                    </div>
                   </div>
                 )}
                 <Textarea
@@ -275,9 +343,12 @@ const SimpleTextExtractor = () => {
                   data-testid="textarea-extracted"
                 />
                 {extractedText && (
-                  <p className="text-sm text-slate-500">
-                    You can edit the text above and copy it when ready.
-                  </p>
+                  <div className="text-sm text-slate-500">
+                    <p>You can edit the text above and copy it when ready.</p>
+                    {useFiltering && (
+                      <p className="text-xs mt-1">Smart filter removes UI elements, social media noise, and short fragments.</p>
+                    )}
+                  </div>
                 )}
               </div>
             </CardContent>
