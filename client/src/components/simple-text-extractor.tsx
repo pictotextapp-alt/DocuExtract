@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, FileText, Copy } from "lucide-react";
+import Tesseract from "tesseract.js";
 
 const SimpleTextExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -107,33 +108,29 @@ const SimpleTextExtractor = () => {
     setIsProcessing(true);
     
     try {
-      const response = await fetch('/api/extract-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          image: imagePreview,
-          language: 'eng',
-          isTable: false 
-        }),
-      });
+      const { data: { text, confidence } } = await Tesseract.recognize(
+        imagePreview,
+        'eng',
+        {
+          logger: m => {
+            // Optional: log progress for debugging
+            if (m.status === 'recognizing text') {
+              console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+            }
+          }
+        }
+      );
       
-      if (!response.ok) {
-        throw new Error('Text extraction failed');
-      }
+      const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+      const confidencePercent = Math.round(confidence);
       
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Text extraction failed');
-      }
-      
-      setExtractedText(data.text);
-      setConfidence(data.confidence);
-      setWordCount(data.words);
+      setExtractedText(text);
+      setConfidence(confidencePercent);
+      setWordCount(words);
       
       toast({
         title: "Text extracted successfully!",
-        description: `Found ${data.words} words with ${data.confidence}% confidence.`,
+        description: `Found ${words} words with ${confidencePercent}% confidence.`,
       });
       
     } catch (error) {
@@ -162,7 +159,10 @@ const SimpleTextExtractor = () => {
           📄 Text Extractor
         </h1>
         <p className="text-lg text-slate-600">
-          Upload an image and extract all text content for easy editing
+          Upload an image and extract all text content using Tesseract.js OCR
+        </p>
+        <p className="text-sm text-slate-500">
+          Powered by Tesseract.js - runs entirely in your browser, no file limits
         </p>
       </div>
 
