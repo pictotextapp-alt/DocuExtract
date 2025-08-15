@@ -353,32 +353,15 @@ const CanvaTextEditor = ({ originalImage, textRegions, textLines, cleanedImage: 
                 🎨 Canva-Style Text Editor
               </h3>
               <p className="text-slate-600">
-                Detect text, clean background, and edit each text element independently
+                Edit each text element independently - drag, style, and customize as needed
               </p>
             </div>
             <div className="flex gap-3">
-              <Button 
-                onClick={handleGrabText}
-                disabled={inpaintMutation.isPending || !originalImage}
-                data-testid="button-grab-text"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-lg font-semibold"
-              >
-                {inpaintMutation.isPending ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Grabbing Text...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-magic mr-2"></i>
-                    Grab Text
-                  </>
-                )}
-              </Button>
+
               
-              {cleanedImage && (
+              {cleanedImage && textLayers.length > 0 && (
                 <Button 
-                  onClick={handleExport}
+                  onClick={handleExportImage}
                   disabled={exportMutation.isPending}
                   data-testid="button-export"
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-semibold"
@@ -391,7 +374,7 @@ const CanvaTextEditor = ({ originalImage, textRegions, textLines, cleanedImage: 
                   ) : (
                     <>
                       <i className="fas fa-download mr-2"></i>
-                      Export
+                      Export Final Image
                     </>
                   )}
                 </Button>
