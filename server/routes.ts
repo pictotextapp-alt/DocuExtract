@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { ocrRequestSchema, imageEditRequestSchema, inpaintRequestSchema, exportRequestSchema, type OCRResponse, type ImageEditResponse, type InpaintResponse, type ExportResponse, type TextRegion, type TextLayer } from "@shared/schema";
+import { ocrRequestSchema, imageEditRequestSchema, inpaintRequestSchema, exportRequestSchema, type OCRResponse, type ImageEditResponse, type InpaintResponse, type ExportResponse, type TextRegion, type TextLayer, type WordBox, type TextLine } from "@shared/schema";
 
 // Advanced content-aware inpainting function
 function inpaintRegion(ctx: any, region: TextRegion, surroundingData: any, offsetX: number, offsetY: number) {
@@ -143,6 +143,83 @@ function smoothRegionEdges(ctx: any, region: TextRegion) {
   ctx.putImageData(imageData, Math.max(0, region.x - blurRadius), Math.max(0, region.y - blurRadius));
 }
 
+// Enhanced OCR processing with line grouping and better analysis
+function groupWordsIntoLines(words: WordBox[]): TextLine[] {
+  if (words.length === 0) return [];
+  
+  // Sort words by y-position first, then x-position
+  const sortedWords = [...words].sort((a, b) => {
+    const yDiff = a.y - b.y;
+    if (Math.abs(yDiff) < 10) { // Words are on roughly the same line
+      return a.x - b.x;
+    }
+    return yDiff;
+  });
+  
+  const lines: TextLine[] = [];
+  let currentLine: WordBox[] = [];
+  let lineId = 1;
+  
+  for (const word of sortedWords) {
+    if (currentLine.length === 0) {
+      currentLine.push(word);
+    } else {
+      const lastWord = currentLine[currentLine.length - 1];
+      const yOverlap = Math.min(lastWord.y + lastWord.height, word.y + word.height) - 
+                      Math.max(lastWord.y, word.y);
+      const yOverlapRatio = yOverlap / Math.min(lastWord.height, word.height);
+      
+      // If words overlap vertically by at least 50% or are very close, group them
+      if (yOverlapRatio > 0.5 || Math.abs(word.y - lastWord.y) < Math.max(lastWord.height, word.height) * 0.3) {
+        currentLine.push(word);
+      } else {
+        // Start a new line
+        if (currentLine.length > 0) {
+          lines.push(createTextLine(currentLine, lineId++));
+        }
+        currentLine = [word];
+      }
+    }
+  }
+  
+  // Add the last line
+  if (currentLine.length > 0) {
+    lines.push(createTextLine(currentLine, lineId));
+  }
+  
+  return lines;
+}
+
+function createTextLine(words: WordBox[], lineId: number): TextLine {
+  const text = words.map(w => w.text).join(' ');
+  const x = Math.min(...words.map(w => w.x));
+  const y = Math.min(...words.map(w => w.y));
+  const maxX = Math.max(...words.map(w => w.x + w.width));
+  const maxY = Math.max(...words.map(w => w.y + w.height));
+  const width = maxX - x;
+  const height = maxY - y;
+  const avgConfidence = words.reduce((sum, w) => sum + w.confidence, 0) / words.length;
+  
+  // Estimate font properties
+  const estimatedFontSize = Math.round(height * 0.8); // Font size ≈ bbox height × 0.8
+  const estimatedLetterSpacing = Math.max(0, (width / text.replace(/\s/g, '').length) - (estimatedFontSize * 0.6));
+  
+  return {
+    id: `line_${lineId}`,
+    text,
+    words,
+    x,
+    y,
+    width,
+    height,
+    confidence: avgConfidence,
+    estimatedFontSize,
+    estimatedColor: "#000000", // Will be enhanced with color detection later
+    estimatedFontWeight: "400", // Will be enhanced with stroke width analysis
+    estimatedLetterSpacing: Math.round(estimatedLetterSpacing),
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // OCR text extraction endpoint
   app.post("/api/extract-text", async (req, res) => {
@@ -189,7 +266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
       const confidence = parseFloat(ocrResult.ParsedResults?.[0]?.TextOrientation) || 95; // Default confidence
       
-      // Parse text regions with coordinates from TextOverlay
+      // Extract words as WordBox objects and create legacy TextRegions
+      const words: WordBox[] = [];
       const textRegions: any[] = [];
       const overlay = ocrResult.ParsedResults?.[0]?.TextOverlay;
       
@@ -198,6 +276,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (line.Words && line.Words.length > 0) {
             line.Words.forEach((word: any, wordIndex: number) => {
               const originalText = word.WordText || "";
+              const wordBox: WordBox = {
+                text: originalText,
+                x: parseFloat(word.Left) || 0,
+                y: parseFloat(word.Top) || 0,
+                width: parseFloat(word.Width) || 0,
+                height: parseFloat(word.Height) || 0,
+                confidence: (parseFloat(word.Confidence) || confidence) / 100,
+              };
+              words.push(wordBox);
+              
+              // Also create legacy TextRegion for backward compatibility
               textRegions.push({
                 id: `word-${lineIndex}-${wordIndex}`,
                 text: originalText,
@@ -216,19 +305,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Group words into lines for better inpainting
+      const textLines = groupWordsIntoLines(words);
+      
       // Count words in extracted text
       const wordCount = extractedText.trim() 
         ? extractedText.trim().split(/\s+/).length 
         : 0;
 
-      console.log(`Extraction successful: ${wordCount} words, ${textRegions.length} regions, confidence: ${confidence}%`);
+      console.log(`Extraction successful: ${wordCount} words, ${textLines.length} lines, ${textRegions.length} regions, confidence: ${confidence}%`);
 
       const result: OCRResponse = {
         text: extractedText.trim(),
         confidence: Math.round(confidence * 100) / 100,
         words: wordCount,
         success: true,
-        textRegions: textRegions,
+        textLines: textLines, // Enhanced line-based processing
+        textRegions: textRegions, // Backward compatibility
       };
 
       res.json(result);

@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import CanvaTextEditor from "./canva-text-editor";
-import type { OCRRequest, OCRResponse, TextRegion, TextLayer } from "@shared/schema";
+import type { OCRRequest, OCRResponse, TextRegion, TextLayer, TextLine } from "@shared/schema";
 
 const PhotoExtractor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [extractedText, setExtractedText] = useState("");
   const [textRegions, setTextRegions] = useState<TextRegion[]>([]);
+  const [textLines, setTextLines] = useState<TextLine[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
   const [confidence, setConfidence] = useState(0);
@@ -40,16 +41,22 @@ const PhotoExtractor = () => {
       if (data.success) {
         setExtractedText(data.text);
         setTextRegions(data.textRegions || []);
+        setTextLines(data.textLines || []);
         setConfidence(data.confidence);
         setWordCount(data.words);
         setShowResult(true);
         
-        // Enable Canva-style editor if we have text regions with coordinates
-        if (data.textRegions && data.textRegions.length > 0) {
+        // Enable Canva-style editor if we have text lines or regions with coordinates
+        const hasTextData = (data.textLines && data.textLines.length > 0) || 
+                           (data.textRegions && data.textRegions.length > 0);
+        
+        if (hasTextData) {
           setShowAdvancedEditor(true);
+          const lineCount = data.textLines?.length || 0;
+          const regionCount = data.textRegions?.length || 0;
           toast({
             title: "Text detection complete",
-            description: `Found ${data.words} words in ${data.textRegions.length} regions. Click "Grab Text" to make them editable.`,
+            description: `Found ${data.words} words in ${lineCount > 0 ? `${lineCount} lines` : `${regionCount} regions`}. Click "Grab Text" to make them editable.`,
           });
         } else {
           setShowAdvancedEditor(false);
@@ -208,6 +215,7 @@ const PhotoExtractor = () => {
     setImagePreview("");
     setExtractedText("");
     setTextRegions([]);
+    setTextLines([]);
     setShowResult(false);
     setShowAdvancedEditor(false);
     setTextLayers([]);
@@ -412,6 +420,7 @@ const PhotoExtractor = () => {
             <CanvaTextEditor
               originalImage={imagePreview}
               textRegions={textRegions}
+              textLines={textLines}
               onTextLayersChange={setTextLayers}
             />
           )}

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import type { 
   TextRegion, 
+  TextLine,
   InpaintRequest, 
   InpaintResponse,
   TextLayer,
@@ -20,10 +21,11 @@ import type {
 interface CanvaTextEditorProps {
   originalImage: string;
   textRegions: TextRegion[];
+  textLines?: TextLine[]; // Enhanced line-based processing
   onTextLayersChange?: (layers: TextLayer[]) => void;
 }
 
-const CanvaTextEditor = ({ originalImage, textRegions, onTextLayersChange }: CanvaTextEditorProps) => {
+const CanvaTextEditor = ({ originalImage, textRegions, textLines, onTextLayersChange }: CanvaTextEditorProps) => {
   const [cleanedImage, setCleanedImage] = useState<string>("");
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
@@ -39,25 +41,27 @@ const CanvaTextEditor = ({ originalImage, textRegions, onTextLayersChange }: Can
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Initialize text layers from detected regions with enhanced styling
+  // Initialize text layers from detected lines (preferred) or regions with enhanced styling
   useEffect(() => {
-    if (textRegions.length > 0 && textLayers.length === 0) {
-      const initialLayers: TextLayer[] = textRegions.map((region, index) => ({
-        id: region.id,
-        text: region.text,
-        originalText: region.originalText,
-        x: region.x,
-        y: region.y,
-        width: region.width,
-        height: region.height,
-        fontSize: Math.max(12, region.height * 0.8),
+    const sourceData = textLines && textLines.length > 0 ? textLines : textRegions;
+    
+    if (sourceData.length > 0 && textLayers.length === 0) {
+      const initialLayers: TextLayer[] = sourceData.map((item, index) => ({
+        id: item.id,
+        text: item.text,
+        originalText: 'originalText' in item ? item.originalText : item.text,
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
+        fontSize: 'estimatedFontSize' in item ? item.estimatedFontSize : Math.max(12, item.height * 0.8),
         fontFamily: "Arial",
-        fontWeight: "400",
+        fontWeight: 'estimatedFontWeight' in item ? item.estimatedFontWeight : "400",
         fontStyle: "normal",
         textAlign: "left",
         lineHeight: 1.2,
-        letterSpacing: 0,
-        color: "#000000",
+        letterSpacing: 'estimatedLetterSpacing' in item ? item.estimatedLetterSpacing : 0,
+        color: 'estimatedColor' in item ? item.estimatedColor : "#000000",
         backgroundColor: "transparent",
         borderColor: "transparent",
         borderWidth: 0,
@@ -73,7 +77,7 @@ const CanvaTextEditor = ({ originalImage, textRegions, onTextLayersChange }: Can
       setTextLayers(initialLayers);
       onTextLayersChange?.(initialLayers);
     }
-  }, [textRegions, textLayers.length, onTextLayersChange]);
+  }, [textRegions, textLines, textLayers.length, onTextLayersChange]);
 
   // Content-aware inpainting mutation
   const inpaintMutation = useMutation({
@@ -166,11 +170,15 @@ const CanvaTextEditor = ({ originalImage, textRegions, onTextLayersChange }: Can
   });
 
   const handleGrabText = () => {
-    if (!originalImage || textRegions.length === 0) return;
+    if (!originalImage || (textLines?.length === 0 && textRegions.length === 0)) return;
     
     const inpaintRequest: InpaintRequest = {
       originalImage,
-      textRegions: textRegions, // Remove all detected text for clean background
+      textLines: textLines, // Preferred: line-based processing for better masks
+      textRegions: textRegions, // Fallback: region-based processing
+      maskExpansion: 4, // Expand masks by 4px
+      maskFeather: 3, // Feather edges by 3px
+      useAdvancedInpainting: true, // Use enhanced algorithms
     };
     
     inpaintMutation.mutate(inpaintRequest);

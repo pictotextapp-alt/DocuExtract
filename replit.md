@@ -2,7 +2,17 @@
 
 ## Overview
 
-TextExtract Pro is a modern web application for extracting text from images using advanced OCR (Optical Character Recognition) technology. The application provides a user-friendly interface for uploading images, processing them through AI-powered text extraction, and managing extraction history. It features a freemium model with basic and premium tiers, supporting various file formats and languages.
+TextExtract Pro is a modern web application that replicates Canva's "Grab Text" feature for extracting and manipulating text from images. The application uses advanced OCR technology with content-aware inpainting to cleanly remove text from backgrounds, then presents the text as editable DOM elements that can be moved, styled, and customized independently. It features line-based text detection, soft mask generation, and sophisticated inpainting algorithms for professional-quality results.
+
+## Recent Changes (August 15, 2025)
+
+✓ **Enhanced OCR Processing**: Implemented word-to-line grouping algorithm that merges detected words into coherent text lines using y-overlap analysis and proximity detection
+✓ **Soft Mask Generation**: Created advanced mask system with configurable expansion (4px) and Gaussian feathering (3px) for seamless inpainting
+✓ **Advanced Content-Aware Inpainting**: Developed multi-directional sampling algorithm that analyzes surrounding textures from 8 directions with weighted blending
+✓ **Line-Based Processing**: Replaced word-by-word processing with line-based approach for cleaner masks and fewer seams
+✓ **Font Property Estimation**: Added intelligent estimation of font size (bbox height × 0.8), letter spacing, and weight based on detected text geometry
+✓ **DOM-Based Text Layers**: Implemented Canva-style editable text elements with drag-and-drop, rotation, styling, and independent manipulation
+✓ **Professional Export System**: Canvas-based rendering that merges text layers back onto cleaned background with proper layering and transformations
 
 ## User Preferences
 

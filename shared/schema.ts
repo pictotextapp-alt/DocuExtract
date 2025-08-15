@@ -24,6 +24,32 @@ export const ocrRequestSchema = z.object({
   isTable: z.boolean().optional().default(false),
 });
 
+// Enhanced word detection schema
+export const wordBoxSchema = z.object({
+  text: z.string(),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  confidence: z.number(),
+});
+
+// Line grouping schema for better inpainting
+export const textLineSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  words: z.array(wordBoxSchema),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  confidence: z.number(),
+  estimatedFontSize: z.number(),
+  estimatedColor: z.string().default("#000000"),
+  estimatedFontWeight: z.string().default("400"),
+  estimatedLetterSpacing: z.number().default(0),
+});
+
 export const textRegionSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -38,13 +64,15 @@ export const textRegionSchema = z.object({
   isEdited: z.boolean().default(false),
 });
 
+// Enhanced OCR response with line detection
 export const ocrResponseSchema = z.object({
   text: z.string(),
   confidence: z.number(),
   words: z.number(),
   success: z.boolean(),
   error: z.string().optional(),
-  textRegions: z.array(textRegionSchema).optional(),
+  textLines: z.array(textLineSchema).optional(),
+  textRegions: z.array(textRegionSchema).optional(), // Keep for backward compatibility
 });
 
 export const imageEditRequestSchema = z.object({
@@ -58,10 +86,14 @@ export const imageEditResponseSchema = z.object({
   error: z.string().optional(),
 });
 
-// New schema for content-aware inpainting
+// Enhanced inpainting with soft masks and line-based processing
 export const inpaintRequestSchema = z.object({
   originalImage: z.string().min(1, "Original image data is required"),
-  textRegions: z.array(textRegionSchema), // Regions to remove with inpainting
+  textLines: z.array(textLineSchema).optional(), // Preferred: process by lines
+  textRegions: z.array(textRegionSchema).optional(), // Fallback: individual regions
+  maskExpansion: z.number().default(4), // Pixels to expand mask
+  maskFeather: z.number().default(3), // Gaussian blur radius for soft edges
+  useAdvancedInpainting: z.boolean().default(true), // Use model-based vs OpenCV
 });
 
 export const inpaintResponseSchema = z.object({
@@ -116,6 +148,8 @@ export const exportResponseSchema = z.object({
 
 export type OCRRequest = z.infer<typeof ocrRequestSchema>;
 export type OCRResponse = z.infer<typeof ocrResponseSchema>;
+export type WordBox = z.infer<typeof wordBoxSchema>;
+export type TextLine = z.infer<typeof textLineSchema>;
 export type TextRegion = z.infer<typeof textRegionSchema>;
 export type ImageEditRequest = z.infer<typeof imageEditRequestSchema>;
 export type ImageEditResponse = z.infer<typeof imageEditResponseSchema>;
