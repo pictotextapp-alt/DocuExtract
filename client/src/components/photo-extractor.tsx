@@ -282,7 +282,7 @@ const PhotoExtractor = () => {
             <div className="mb-6">
               <i className="fas fa-camera text-6xl text-slate-400"></i>
             </div>
-            <h3 className="text-2xl font-semibold text-slate-700 mb-4">Upload a Photo</h3>
+            <h3 className="text-2xl font-semibold text-slate-700 mb-4">Upload Image for Text Extraction</h3>
             <p className="text-slate-500 mb-6">
               Drag and drop your image here, or click to browse
             </p>
