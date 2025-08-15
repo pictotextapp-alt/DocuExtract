@@ -208,7 +208,7 @@ const SimpleTextExtractor = () => {
                     {isProcessing ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        {ocrProgress > 0 ? `Extracting... ${ocrProgress}%` : 'Initializing...'}
+                        Processing with OCR.space API...
                       </>
                     ) : (
                       <>
