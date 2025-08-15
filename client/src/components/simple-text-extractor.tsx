@@ -15,7 +15,50 @@ const SimpleTextExtractor = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions to keep under 800KB
+        let { width, height } = img;
+        const maxDimension = 1200; // Reasonable max size for OCR
+        
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width *= ratio;
+          height *= ratio;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Try different quality levels until under 800KB
+        let quality = 0.8;
+        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        
+        while (compressedDataUrl.length > 800 * 1024 && quality > 0.1) {
+          quality -= 0.1;
+          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        
+        resolve(compressedDataUrl);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -39,17 +82,23 @@ const SimpleTextExtractor = () => {
 
     setSelectedImage(file);
     
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    
-    // Reset previous results
-    setExtractedText("");
-    setConfidence(0);
-    setWordCount(0);
+    try {
+      // Compress image for OCR processing
+      const compressedImage = await compressImage(file);
+      setImagePreview(compressedImage);
+      
+      // Reset previous results
+      setExtractedText("");
+      setConfidence(0);
+      setWordCount(0);
+      
+    } catch (error) {
+      toast({
+        title: "Image processing failed",
+        description: "Unable to process the image. Please try another file.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExtractText = async () => {
