@@ -78,30 +78,36 @@ const SimpleTextExtractor = () => {
   const filterText = (rawText: string): string => {
     if (!useFiltering) return rawText;
     
-    // For images with mostly OCR garbage, return a simple message
-    const hasRealWords = rawText.match(/\b[A-Za-z]{3,}\b/g);
-    const symbolCount = (rawText.match(/[^\w\s]/g) || []).length;
-    const totalLength = rawText.length;
+    console.log("Filtering text:", rawText);
     
-    if (!hasRealWords || hasRealWords.length < 3 || (symbolCount / totalLength) > 0.3) {
-      return "OCR could not extract readable text from this image.\nThe text may be too stylized, decorative, or low resolution.\n\nTry:\n• Using a clearer, higher resolution image\n• Images with simple, clean text\n• Documents or screenshots with plain text";
+    // Check for OCR garbage - text with too many symbols or unreadable characters
+    const hasRealWords = rawText.match(/\b[A-Za-z]{3,}\b/g);
+    const weirdChars = (rawText.match(/[¥€£™®©§¶†‡•…‰′″‹›«»]/g) || []).length;
+    const symbolRatio = (rawText.match(/[^\w\s]/g) || []).length / rawText.length;
+    
+    console.log("Real words found:", hasRealWords);
+    console.log("Weird chars:", weirdChars);
+    console.log("Symbol ratio:", symbolRatio);
+    
+    // If OCR failed (few real words OR lots of weird symbols OR high symbol ratio)
+    if (!hasRealWords || hasRealWords.length < 2 || weirdChars > 2 || symbolRatio > 0.4) {
+      return "OCR could not extract readable text from this image.\n\nThe text appears to be too stylized, decorative, or low resolution for accurate recognition.\n\nTry using:\n• Plain text documents\n• Screenshots with simple fonts\n• High-contrast images\n• Less decorative text styles";
     }
     
-    // Split into lines and clean
+    // If we have some real words, clean up the text
     const lines = rawText.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
     
-    // Keep only lines that look like real text
     const cleanLines = lines.filter(line => {
       const lowerLine = line.toLowerCase();
       
-      // Skip obvious social media UI
+      // Skip social media UI elements
       if (lowerLine.match(/\d+(\.\d+)?[km]?\s*(like|follow|view|share|post)/i)) return false;
-      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|reels?|manage|edit)/)) return false;
+      if (lowerLine.match(/^(posts?|about|mentions?|reviews?|manage|edit)/)) return false;
       if (lowerLine.match(/@|\.com|www\.|http/)) return false;
       
-      // Keep lines with readable words (at least 2 words, each 2+ chars)
-      const words = line.split(/\s+/).filter(word => word.match(/^[A-Za-z]{2,}$/));
-      return words.length >= 2;
+      // Keep lines with at least some readable content
+      const readableWords = line.split(/\s+/).filter(word => word.match(/^[A-Za-z]{2,}$/));
+      return readableWords.length >= 1;
     });
     
     return cleanLines.slice(0, 10).join('\n').trim();
