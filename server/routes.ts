@@ -537,204 +537,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Professional-grade inpainting using TELEA-inspired fast marching method
+  // Precise background reconstruction with edge-preserving inpainting
   async function professionalInpainting(ctx: any, element: any, originalImageData: ImageData) {
-    const maskExpansion = 6;
-    const maskFeather = 4;
+    const maskExpansion = 2; // Smaller expansion for precision
+    const maskFeather = 2;   // Lighter feathering to avoid blur
     
-    // Step 1: Create expanded region with soft mask
-    const region = { 
-      x: Math.max(0, element.x - maskExpansion), 
-      y: Math.max(0, element.y - maskExpansion), 
-      width: Math.min(ctx.canvas.width - Math.max(0, element.x - maskExpansion), element.width + maskExpansion * 2), 
-      height: Math.min(ctx.canvas.height - Math.max(0, element.y - maskExpansion), element.height + maskExpansion * 2)
-    };
+    // Step 1: Create precise tight mask around text only
+    const preciseMask = createPreciseTextMask(element, originalImageData, ctx.canvas.width, ctx.canvas.height);
     
-    // Step 2: Analyze surrounding context patterns
-    const contextSamples = analyzeBackgroundContext(originalImageData, element, maskExpansion * 3);
-    
-    // Step 3: Create sophisticated mask with soft feathered edges
-    const mask = createAdvancedMask(element, maskExpansion, maskFeather, ctx.canvas.width, ctx.canvas.height);
-    
-    // Step 4: Apply TELEA-inspired inpainting with fast marching
-    const processOrder = createInpaintingOrder(element, maskExpansion, maskFeather);
-    
-    for (const point of processOrder) {
-      const globalX = point.x;
-      const globalY = point.y;
-      
-      // Skip if outside canvas bounds
-      if (globalX >= ctx.canvas.width || globalY >= ctx.canvas.height || globalX < 0 || globalY < 0) continue;
-      
-      // Get mask value for this pixel
-      const maskValue = getMaskValue(mask, globalX, globalY, ctx.canvas.width);
-      
-      if (maskValue > 0.1) {
-        // Calculate inpainted color using weighted context sampling
-        const inpaintedColor = calculateInpaintedColor(
-          originalImageData, 
-          globalX, 
-          globalY, 
-          contextSamples, 
-          maskValue,
-          element
-        );
-        
-        // Apply color with proper alpha blending for seamless integration
-        if (maskValue >= 0.95) {
-          ctx.fillStyle = `rgb(${inpaintedColor.r}, ${inpaintedColor.g}, ${inpaintedColor.b})`;
-        } else {
-          ctx.fillStyle = `rgba(${inpaintedColor.r}, ${inpaintedColor.g}, ${inpaintedColor.b}, ${maskValue})`;
-        }
-        ctx.fillRect(globalX, globalY, 1, 1);
-      }
-    }
+    // Step 2: Use edge-aware gradient-based reconstruction
+    applyEdgeAwareInpainting(ctx, element, originalImageData, preciseMask);
   }
   
-  function analyzeBackgroundContext(imageData: ImageData, element: any, contextRadius: number) {
-    const samples = [];
-    
-    // Define context sampling regions around the text
-    const samplingRegions = [
-      // Horizontal strips (left and right)
-      { x: Math.max(0, element.x - contextRadius), y: element.y, w: contextRadius, h: element.height, weight: 1.5 },
-      { x: element.x + element.width, y: element.y, w: contextRadius, h: element.height, weight: 1.5 },
-      // Vertical strips (top and bottom)
-      { x: element.x, y: Math.max(0, element.y - contextRadius), w: element.width, h: contextRadius, weight: 1.2 },
-      { x: element.x, y: element.y + element.height, w: element.width, h: contextRadius, weight: 1.2 },
-      // Corner regions for pattern continuity
-      { x: Math.max(0, element.x - contextRadius), y: Math.max(0, element.y - contextRadius), w: contextRadius, h: contextRadius, weight: 0.8 },
-      { x: element.x + element.width, y: Math.max(0, element.y - contextRadius), w: contextRadius, h: contextRadius, weight: 0.8 },
-      { x: Math.max(0, element.x - contextRadius), y: element.y + element.height, w: contextRadius, h: contextRadius, weight: 0.8 },
-      { x: element.x + element.width, y: element.y + element.height, w: contextRadius, h: contextRadius, weight: 0.8 }
-    ];
-    
-    samplingRegions.forEach(region => {
-      for (let y = region.y; y < Math.min(imageData.height, region.y + region.h); y += 3) {
-        for (let x = region.x; x < Math.min(imageData.width, region.x + region.w); x += 3) {
-          if (x >= 0 && y >= 0) {
-            const idx = (y * imageData.width + x) * 4;
-            const centerX = element.x + element.width / 2;
-            const centerY = element.y + element.height / 2;
-            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-            
-            samples.push({
-              r: imageData.data[idx],
-              g: imageData.data[idx + 1], 
-              b: imageData.data[idx + 2],
-              x: x,
-              y: y,
-              distance: distance,
-              weight: region.weight / (1 + distance * 0.01)
-            });
-          }
-        }
-      }
-    });
-    
-    return samples.sort((a, b) => b.weight - a.weight);
-  }
-  
-  function createAdvancedMask(element: any, expansion: number, feather: number, canvasWidth: number, canvasHeight: number) {
+  function createPreciseTextMask(element: any, imageData: ImageData, canvasWidth: number, canvasHeight: number) {
     const mask = new Array(canvasWidth * canvasHeight).fill(0);
     
-    // Create base mask region with expansion
-    const maskBounds = {
-      left: Math.max(0, element.x - expansion),
-      top: Math.max(0, element.y - expansion),
-      right: Math.min(canvasWidth, element.x + element.width + expansion),
-      bottom: Math.min(canvasHeight, element.y + element.height + expansion)
-    };
-    
-    for (let y = maskBounds.top; y < maskBounds.bottom; y++) {
-      for (let x = maskBounds.left; x < maskBounds.right; x++) {
-        mask[y * canvasWidth + x] = 1.0;
-      }
-    }
-    
-    // Apply Gaussian-like feathering for soft edges
-    if (feather > 0) {
-      const featheredMask = [...mask];
-      for (let y = 0; y < canvasHeight; y++) {
-        for (let x = 0; x < canvasWidth; x++) {
-          const idx = y * canvasWidth + x;
-          if (mask[idx] > 0) {
-            // Calculate distance to nearest edge of text region (not expansion)
-            const distToTextEdge = Math.min(
-              Math.abs(x - element.x),
-              Math.abs(x - (element.x + element.width)),
-              Math.abs(y - element.y),
-              Math.abs(y - (element.y + element.height))
-            );
-            
-            if (distToTextEdge < feather + expansion) {
-              const fadeDistance = Math.max(0, (feather + expansion) - distToTextEdge);
-              featheredMask[idx] = Math.min(1.0, fadeDistance / feather);
-            }
-          }
+    // Create tight mask only within actual text bounds (no expansion)
+    for (let y = element.y; y < Math.min(canvasHeight, element.y + element.height); y++) {
+      for (let x = element.x; x < Math.min(canvasWidth, element.x + element.width); x++) {
+        const idx = (y * imageData.width + x) * 4;
+        const r = imageData.data[idx];
+        const g = imageData.data[idx + 1];
+        const b = imageData.data[idx + 2];
+        
+        // More precise text detection based on contrast and edge patterns
+        const neighbors = getNeighborPixels(imageData, x, y);
+        const avgR = neighbors.reduce((sum, p) => sum + p.r, 0) / neighbors.length;
+        const avgG = neighbors.reduce((sum, p) => sum + p.g, 0) / neighbors.length;
+        const avgB = neighbors.reduce((sum, p) => sum + p.b, 0) / neighbors.length;
+        
+        // If this pixel differs significantly from neighbors, it's likely text
+        const contrast = Math.abs(r - avgR) + Math.abs(g - avgG) + Math.abs(b - avgB);
+        if (contrast > 30) { // Text typically has high contrast with background
+          mask[y * canvasWidth + x] = 1.0;
         }
       }
-      return featheredMask;
     }
     
     return mask;
   }
   
-  function createInpaintingOrder(element: any, expansion: number, feather: number) {
-    const points = [];
+  function getNeighborPixels(imageData: ImageData, x: number, y: number) {
+    const neighbors = [];
+    const offsets = [[-2, 0], [2, 0], [0, -2], [0, 2], [-2, -2], [2, -2], [-2, 2], [2, 2]];
     
-    // Process from outside to inside for better texture propagation
-    const bounds = {
-      left: Math.max(0, element.x - expansion),
-      top: Math.max(0, element.y - expansion),
-      right: element.x + element.width + expansion,
-      bottom: element.y + element.height + expansion
-    };
-    
-    for (let y = bounds.top; y < bounds.bottom; y++) {
-      for (let x = bounds.left; x < bounds.right; x++) {
-        const centerX = element.x + element.width / 2;
-        const centerY = element.y + element.height / 2;
-        const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-        
-        points.push({ x, y, distance: distanceFromCenter });
+    for (const [dx, dy] of offsets) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < imageData.width && ny >= 0 && ny < imageData.height) {
+        const idx = (ny * imageData.width + nx) * 4;
+        neighbors.push({
+          r: imageData.data[idx],
+          g: imageData.data[idx + 1],
+          b: imageData.data[idx + 2]
+        });
       }
     }
     
-    // Sort by distance from center (process edges first)
-    return points.sort((a, b) => b.distance - a.distance);
+    return neighbors;
   }
   
-  function getMaskValue(mask: number[], x: number, y: number, width: number): number {
-    if (x < 0 || y < 0 || x >= width || y * width + x >= mask.length) return 0;
-    return mask[y * width + x];
+  function applyEdgeAwareInpainting(ctx: any, element: any, originalImageData: ImageData, mask: number[]) {
+    // Use gradient-based reconstruction instead of texture synthesis
+    for (let y = element.y; y < element.y + element.height; y++) {
+      for (let x = element.x; x < element.x + element.width; x++) {
+        const maskIdx = y * ctx.canvas.width + x;
+        
+        if (mask[maskIdx] > 0) {
+          // Find nearest non-masked pixels in 4 directions
+          const nearestPixels = findNearestBackgroundPixels(originalImageData, mask, x, y, ctx.canvas.width, ctx.canvas.height);
+          
+          if (nearestPixels.length > 0) {
+            // Use distance-weighted interpolation for smooth reconstruction
+            const interpolatedColor = interpolateBackgroundColor(nearestPixels, x, y);
+            
+            ctx.fillStyle = `rgb(${interpolatedColor.r}, ${interpolatedColor.g}, ${interpolatedColor.b})`;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
   }
   
-  function calculateInpaintedColor(imageData: ImageData, x: number, y: number, contextSamples: any[], maskValue: number, element: any) {
-    // Find nearest high-quality context samples
-    const relevantSamples = contextSamples
-      .filter(sample => {
-        const distance = Math.sqrt(Math.pow(x - sample.x, 2) + Math.pow(y - sample.y, 2));
-        return distance < 100; // Only use nearby samples
-      })
-      .slice(0, 12); // Use top 12 weighted samples
+  function findNearestBackgroundPixels(imageData: ImageData, mask: number[], centerX: number, centerY: number, width: number, height: number) {
+    const backgroundPixels = [];
+    const maxDistance = 20; // Search within reasonable distance
     
-    if (relevantSamples.length === 0) {
-      // Fallback to distant samples if no nearby ones
-      relevantSamples.push(...contextSamples.slice(0, 5));
+    // Search in expanding circles for background pixels
+    for (let radius = 1; radius <= maxDistance; radius++) {
+      const points = getCirclePoints(centerX, centerY, radius);
+      
+      for (const point of points) {
+        if (point.x >= 0 && point.x < width && point.y >= 0 && point.y < height) {
+          const maskIdx = point.y * width + point.x;
+          
+          // If this pixel is not masked (it's background)
+          if (mask[maskIdx] === 0) {
+            const imgIdx = (point.y * imageData.width + point.x) * 4;
+            backgroundPixels.push({
+              x: point.x,
+              y: point.y,
+              r: imageData.data[imgIdx],
+              g: imageData.data[imgIdx + 1],
+              b: imageData.data[imgIdx + 2],
+              distance: Math.sqrt(Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2))
+            });
+          }
+        }
+      }
+      
+      // If we found enough background pixels, stop searching
+      if (backgroundPixels.length >= 8) break;
     }
     
+    return backgroundPixels;
+  }
+  
+  function getCirclePoints(centerX: number, centerY: number, radius: number) {
+    const points = [];
+    const steps = Math.max(8, radius * 2); // More points for larger radius
+    
+    for (let i = 0; i < steps; i++) {
+      const angle = (i / steps) * 2 * Math.PI;
+      const x = Math.round(centerX + radius * Math.cos(angle));
+      const y = Math.round(centerY + radius * Math.sin(angle));
+      points.push({ x, y });
+    }
+    
+    return points;
+  }
+  
+  function interpolateBackgroundColor(backgroundPixels: any[], targetX: number, targetY: number) {
     let r = 0, g = 0, b = 0, totalWeight = 0;
     
-    relevantSamples.forEach(sample => {
-      const distance = Math.sqrt(Math.pow(x - sample.x, 2) + Math.pow(y - sample.y, 2));
-      const proximityWeight = 1 / (1 + distance * 0.05); // Stronger proximity weighting
-      const finalWeight = sample.weight * proximityWeight;
-      
-      r += sample.r * finalWeight;
-      g += sample.g * finalWeight;
-      b += sample.b * finalWeight;
-      totalWeight += finalWeight;
+    // Use inverse distance weighting for smooth gradients
+    backgroundPixels.forEach(pixel => {
+      const weight = 1 / (1 + pixel.distance * pixel.distance * 0.1);
+      r += pixel.r * weight;
+      g += pixel.g * weight;
+      b += pixel.b * weight;
+      totalWeight += weight;
     });
     
     if (totalWeight > 0) {
@@ -743,18 +685,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       b /= totalWeight;
     }
     
-    // Add controlled texture noise for natural appearance
-    const noiseLevel = 6 * (1 - maskValue * 0.5); // Less noise near edges, more in center
-    r += (Math.random() - 0.5) * noiseLevel;
-    g += (Math.random() - 0.5) * noiseLevel;
-    b += (Math.random() - 0.5) * noiseLevel;
-    
     return {
       r: Math.max(0, Math.min(255, Math.round(r))),
       g: Math.max(0, Math.min(255, Math.round(g))),
       b: Math.max(0, Math.min(255, Math.round(b)))
     };
   }
+  
+
 
   const httpServer = createServer(app);
   return httpServer;

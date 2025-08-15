@@ -1,0 +1,67 @@
+Current Problem: The inpainting is creating blurry, distorted results instead of clean background reconstruction.
+Specific Technical Requirements:
+
+Use Better Inpainting Libraries:
+
+python# DON'T use basic cv2.inpaint() - it creates blur like your result
+# USE these instead:
+
+# Option 1: LaMa (Best quality)
+from lama_cleaner import LaMaInpainting
+
+# Option 2: Use edge-aware inpainting
+import cv2
+result = cv2.inpaint(img, mask, 3, cv2.INPAINT_NS)  # Use NS method, not TELEA
+
+# Option 3: Use segmentation-based approach
+from skimage.segmentation import random_walker
+
+Create Precise Text Masks:
+
+python# Current mask is probably too large/imprecise
+# Use character-level detection instead of word-level
+import easyocr
+reader = easyocr.Reader(['en'])
+results = reader.readtext(image, paragraph=False)  # Get individual characters
+
+Multi-Step Process:
+
+pythondef process_image(image, old_text, new_text):
+    # Step 1: Create tight mask around ONLY the text characters
+    precise_mask = create_character_level_mask(image, old_text)
+    
+    # Step 2: Use edge-preserving inpainting
+    clean_bg = advanced_inpainting(image, precise_mask)
+    
+    # Step 3: Add new text with exact font matching
+    final_image = add_text_with_style_matching(clean_bg, new_text, original_text_style)
+    
+    return final_image
+
+Alternative Approach - Use AI Models:
+
+python# If OpenCV inpainting fails, use these:
+# - Use Stable Diffusion inpainting models
+# - Use RunwayML or similar API for professional inpainting
+# - Use GFPGAN or similar restoration models
+Quick Test to Debug:
+
+First, show me JUST the mask you're creating (save mask as separate image)
+Show me JUST the inpainting result (before adding new text)
+Then show final result with new text added
+
+Alternative Simple Approach:
+If inpainting keeps failing, try this simpler method:
+python# Instead of inpainting, try:
+1. Detect text area
+2. Sample colors from immediate surrounding pixels  
+3. Use those colors to create gradient fill
+4. Add new text on top
+Libraries to Install:
+bashpip install lama-cleaner
+pip install easyocr  
+pip install opencv-python
+pip install pillow
+pip install scikit-image
+Expected Output: Clean background reconstruction with new text that matches original styling perfectly.
+Debug Question: Can you show me the intermediate steps - the mask image and the inpainting-only result before text is added?
