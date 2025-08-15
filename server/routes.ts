@@ -378,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await professionalInpainting(ctx, element, originalImageData);
       }
       
-      const cleanedImageData = canvas.toDataURL('image/png', 1.0);
+      const cleanedImageData = canvas.toDataURL('image/png');
       
       const result: InpaintResponse = {
         cleanedImage: cleanedImageData,
@@ -513,9 +513,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Convert to desired format
-      const mimeType = format === 'jpeg' ? 'image/jpeg' : 
-                      format === 'webp' ? 'image/webp' : 'image/png';
-      const exportedImageData = canvas.toDataURL(mimeType, quality);
+      let exportedImageData: string;
+      if (format === 'jpeg') {
+        exportedImageData = canvas.toDataURL('image/jpeg', quality);
+      } else if (format === 'webp') {
+        exportedImageData = canvas.toDataURL('image/webp', quality);
+      } else {
+        exportedImageData = canvas.toDataURL('image/png');
+      }
       
       const result: ExportResponse = {
         exportedImage: exportedImageData,
@@ -543,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const maskFeather = 2;   // Lighter feathering to avoid blur
     
     // Step 1: Create precise tight mask around text only
-    const preciseMask = createPreciseTextMask(element, originalImageData, ctx.canvas.width, ctx.canvas.height);
+    const preciseMask = createPreciseTextMask(element, originalImageData as any, ctx.canvas.width, ctx.canvas.height);
     
     // Step 2: Use edge-aware gradient-based reconstruction
     applyEdgeAwareInpainting(ctx, element, originalImageData, preciseMask);
