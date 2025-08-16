@@ -42,6 +42,7 @@ export default function SimpleTextExtractor() {
   
   // UI states
   const [file, setFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -68,6 +69,13 @@ export default function SimpleTextExtractor() {
       });
       return;
     }
+
+    // Create image preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
 
     setFile(selectedFile);
     setExtractedText("");
@@ -206,6 +214,7 @@ export default function SimpleTextExtractor() {
     try {
       await logout();
       setFile(null);
+      setImagePreview(null);
       setExtractedText("");
       setResult(null);
       toast({
@@ -392,14 +401,14 @@ export default function SimpleTextExtractor() {
             </div>
           )}
 
-          {/* Results */}
-          {result && extractedText && (
+          {/* Results - Two Column Layout */}
+          {result && extractedText && imagePreview && (
             <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    Extracted Text
+                    Text Extraction Results
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -412,23 +421,46 @@ export default function SimpleTextExtractor() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Textarea
-                  value={extractedText}
-                  onChange={(e) => setExtractedText(e.target.value)}
-                  className="min-h-48 font-mono text-sm"
-                  placeholder="Extracted text will appear here..."
-                  data-testid="extracted-text-area"
-                />
-                
-                <div className="flex gap-2 flex-wrap">
-                  <Button onClick={copyToClipboard} variant="outline" data-testid="button-copy">
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button onClick={downloadText} variant="outline" data-testid="button-download">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
+                {/* Two Column Layout */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Left Column - Original Image */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Original Image</h3>
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                      <img 
+                        src={imagePreview} 
+                        alt="Original uploaded image" 
+                        className="w-full h-auto max-h-96 object-contain"
+                        data-testid="original-image"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      File: {file?.name} ({((file?.size || 0) / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  </div>
+
+                  {/* Right Column - Extracted Text */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">Extracted Text</h3>
+                    <Textarea
+                      value={extractedText}
+                      onChange={(e) => setExtractedText(e.target.value)}
+                      className="min-h-96 font-mono text-sm resize-none"
+                      placeholder="Extracted text will appear here..."
+                      data-testid="extracted-text-area"
+                    />
+                    
+                    <div className="flex gap-2 flex-wrap">
+                      <Button onClick={copyToClipboard} variant="outline" data-testid="button-copy">
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy
+                      </Button>
+                      <Button onClick={downloadText} variant="outline" data-testid="button-download">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

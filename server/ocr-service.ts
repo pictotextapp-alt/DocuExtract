@@ -21,9 +21,19 @@ export class OCRService {
     useFiltering = false
   ): Promise<OCRResult> {
     try {
+      // Compress image if it's too large (OCR.space has 1MB limit)
+      let processedBuffer = imageBuffer;
+      const maxSize = 1024 * 1024; // 1MB limit for OCR.space
+      
+      if (imageBuffer.length > maxSize) {
+        console.log(`Image size ${Math.round(imageBuffer.length / 1024)}KB exceeds limit, compressing...`);
+        processedBuffer = await this.compressImage(imageBuffer);
+        console.log(`Compressed to ${Math.round(processedBuffer.length / 1024)}KB`);
+      }
+
       // Convert buffer to base64
-      const base64Image = imageBuffer.toString('base64');
-      const mimeType = this.detectMimeType(imageBuffer);
+      const base64Image = processedBuffer.toString('base64');
+      const mimeType = this.detectMimeType(processedBuffer);
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
       // Prepare FormData for OCR.space API
@@ -66,7 +76,7 @@ export class OCRService {
       }
 
       const finalText = filteredText || extractedText;
-      const wordCount = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
+      const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
 
       return {
         extractedText: finalText,
@@ -101,6 +111,54 @@ export class OCRService {
     
     // Default to JPEG
     return 'image/jpeg';
+  }
+
+  private async compressImage(imageBuffer: Buffer): Promise<Buffer> {
+    try {
+      const { createCanvas, loadImage } = await import('canvas');
+      
+      // Load the image
+      const image = await loadImage(imageBuffer);
+      const originalWidth = image.width;
+      const originalHeight = image.height;
+      
+      // Calculate new dimensions to stay under 1MB
+      // Start with 70% quality and adjust size if needed
+      let quality = 0.7;
+      let scale = 1.0;
+      
+      // If image is very large, scale it down
+      const maxDimension = 2048;
+      if (originalWidth > maxDimension || originalHeight > maxDimension) {
+        scale = Math.min(maxDimension / originalWidth, maxDimension / originalHeight);
+      }
+      
+      const newWidth = Math.round(originalWidth * scale);
+      const newHeight = Math.round(originalHeight * scale);
+      
+      // Create canvas and draw resized image
+      const canvas = createCanvas(newWidth, newHeight);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0, newWidth, newHeight);
+      
+      // Convert to JPEG with compression
+      let compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
+      
+      // If still too large, reduce quality further
+      while (compressedBuffer.length > 1024 * 1024 && quality > 0.3) {
+        quality -= 0.1;
+        compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
+      }
+      
+      return compressedBuffer;
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      // If compression fails, try to use original but throw error if too large
+      if (imageBuffer.length > 1024 * 1024) {
+        throw new Error('File size exceeds the maximum size limit. Maximum size limit 1024 KB');
+      }
+      return imageBuffer;
+    }
   }
 
   private filterOCRText(text: string): string {
@@ -148,7 +206,7 @@ export class OCRService {
     let confidence = 75; // Start with base confidence
     
     // Factor 1: Text length and structure
-    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    const wordCount = text.split(/\s+/).filter((w: string) => w.length > 0).length;
     if (wordCount > 10) confidence += 5;
     if (wordCount > 30) confidence += 5;
     
