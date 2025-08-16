@@ -1,25 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  mode?: "login" | "register";
+  onModeChange?: (mode: "login" | "register") => void;
   defaultTab?: "login" | "register";
 }
 
-export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "login" }: AuthModalProps) {
   const { login, register } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = useState(mode || defaultTab);
+
+  // Update activeTab when mode prop changes
+  useEffect(() => {
+    if (mode) {
+      setActiveTab(mode);
+    }
+  }, [mode]);
+
+  // Handle tab change and notify parent
+  const handleTabChange = (newTab: "login" | "register") => {
+    setActiveTab(newTab);
+    if (onModeChange) {
+      onModeChange(newTab);
+    }
+  };
 
   const [loginForm, setLoginForm] = useState({
     username: "",
@@ -130,6 +149,59 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
     }
   };
 
+  // Social authentication handlers
+  const handleSocialAuth = async (provider: string) => {
+    setIsLoading(true);
+    try {
+      // Redirect to OAuth provider
+      window.location.href = `/api/auth/${provider}`;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `${provider} authentication failed`,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const SocialLoginButtons = () => (
+    <div className="space-y-3">
+      <Button
+        onClick={() => handleSocialAuth("google")}
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2 py-3"
+        disabled={isLoading}
+        data-testid="button-google-auth"
+      >
+        <FaGoogle className="w-4 h-4 text-red-500" />
+        Continue with Google
+      </Button>
+      
+      <Button
+        onClick={() => handleSocialAuth("facebook")}
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2 py-3"
+        disabled={isLoading}
+        data-testid="button-facebook-auth"
+      >
+        <FaFacebook className="w-4 h-4 text-blue-600" />
+        Continue with Facebook
+      </Button>
+      
+      <Button
+        onClick={() => handleSocialAuth("apple")}
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2 py-3"
+        disabled={isLoading}
+        data-testid="button-apple-auth"
+      >
+        <FaApple className="w-4 h-4 text-gray-800 dark:text-gray-200" />
+        Continue with Apple
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -139,7 +211,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as "login" | "register")} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
@@ -195,6 +267,23 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
                     )}
                   </Button>
                 </form>
+                
+                <div className="mt-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator className="w-full" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-gray-950 px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <SocialLoginButtons />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -273,6 +362,23 @@ export function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalPr
                     )}
                   </Button>
                 </form>
+                
+                <div className="mt-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator className="w-full" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-gray-950 px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <SocialLoginButtons />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -6,13 +6,16 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"),  // Optional for OAuth users
+  oauthProvider: text("oauth_provider"),  // google, facebook, apple
+  oauthId: text("oauth_id"),  // OAuth provider user ID
   isPremium: boolean("is_premium").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
+  oauthIdx: index("users_oauth_idx").on(table.oauthProvider, table.oauthId),
 }));
 
 export const sessions = pgTable("sessions", {
@@ -56,7 +59,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
   passwordHash: true,
 }).extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+});
+
+// OAuth user schema (no password required)
+export const insertOAuthUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  passwordHash: true,
 });
 
 export const insertUsageLogSchema = createInsertSchema(usageLogs).omit({
