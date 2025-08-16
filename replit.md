@@ -14,6 +14,8 @@ PictoText is a professional web application for extracting and manipulating text
 ✓ **High-Quality Logo**: Custom SVG logo with document and text extraction visual metaphor
 ✓ **Streamlined Navigation**: Simplified to Home and Premium only, removing unnecessary menu clutter
 ✓ **Professional Branding**: "Transform Images to Editable Text" tagline with enterprise positioning
+✓ **Enhanced Features Section**: Added Free Use, Multiple Formats, and Multi-Language Support sections
+✓ **Comprehensive FAQ**: Added 6-item FAQ section covering common user questions about functionality, formats, and features
 
 ## User Preferences
 
