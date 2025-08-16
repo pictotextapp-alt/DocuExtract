@@ -14,7 +14,13 @@ try {
     console.log("[usage-tracking] DATABASE_URL not configured, using memory storage");
   }
 } catch (error) {
-  console.log("[usage-tracking] Database initialization failed, using memory storage:", error.message);
+  console.log("[usage-tracking] Database initialization failed, using memory storage:", error instanceof Error ? error.message : String(error));
+}
+
+// Anonymous usage tracking using session ID
+export async function getAnonymousUsage(sessionId: string, date = new Date()) {
+  // Always use memory storage for anonymous users
+  return MemoryStorage.getDailyUsage(`anon_${sessionId}`, date);
 }
 
 export async function getDailyUsage(userId: string, date = new Date()) {
@@ -49,6 +55,23 @@ export async function getDailyUsage(userId: string, date = new Date()) {
     // Use memory storage
     return MemoryStorage.getDailyUsage(userId, date);
   }
+}
+
+export async function canProcessImageAnonymous(sessionId: string): Promise<{
+  canProcess: boolean;
+  reason?: string;
+  usage: { imageCount: number; dailyLimit: number };
+}> {
+  const usage = await getAnonymousUsage(sessionId);
+  
+  return {
+    canProcess: usage.canProcess,
+    reason: usage.canProcess ? undefined : "Daily limit reached for anonymous users",
+    usage: {
+      imageCount: usage.imageCount,
+      dailyLimit: usage.dailyLimit,
+    },
+  };
 }
 
 export async function canProcessImage(userId: string): Promise<{
@@ -100,6 +123,15 @@ export async function canProcessImage(userId: string): Promise<{
     // Use memory storage
     return MemoryStorage.canProcessImage(userId);
   }
+}
+
+export async function recordAnonymousImageProcessing(
+  sessionId: string,
+  extractedWords: number,
+  confidence: number
+): Promise<void> {
+  // Always use memory storage for anonymous users
+  return MemoryStorage.recordImageProcessing(`anon_${sessionId}`, extractedWords, confidence);
 }
 
 export async function recordImageProcessing(

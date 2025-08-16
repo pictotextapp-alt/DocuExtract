@@ -6,16 +6,17 @@ PictoText is a professional web application for extracting and manipulating text
 
 ## Recent Changes (August 16, 2025)
 
+✓ **Anonymous Usage Support**: Major architectural change - free tier no longer requires login
+✓ **Session-Based Tracking**: Anonymous users can use 3 free extractions per day via session tracking
+✓ **Smart Authentication Flow**: Only prompt for login when users exceed their daily limit
+✓ **Enhanced Usage API**: Modified /api/usage and /api/extract-text to support both authenticated and anonymous users
+✓ **Memory Storage Adaptation**: Extended memory storage to handle anonymous user tracking with session IDs
+✓ **Seamless User Experience**: Users can start using the app immediately without barriers
 ✓ **PictoText Rebrand**: Complete visual rebrand with professional SVG logo and gradient styling
 ✓ **Enhanced OCR Processing**: OCR.space API integration with advanced image preprocessing and confidence scoring
 ✓ **Professional UI**: Clean navigation with reduced menu items, modern typography and enterprise-grade appearance
 ✓ **Smart Image Compression**: Automatic compression for large files with quality optimization
 ✓ **Intelligent Filtering**: Context-aware text extraction that removes UI noise while preserving meaningful content
-✓ **High-Quality Logo**: Custom SVG logo with document and text extraction visual metaphor
-✓ **Streamlined Navigation**: Simplified to Home and Premium only, removing unnecessary menu clutter
-✓ **Professional Branding**: "Transform Images to Editable Text" tagline with enterprise positioning
-✓ **Enhanced Features Section**: Added Free Use, Multiple Formats, and Multi-Language Support sections
-✓ **Interactive FAQ**: Added 8-item collapsible FAQ with safety, mobile usage, and functionality questions prioritized by importance
 
 ## User Preferences
 
@@ -45,12 +46,15 @@ The backend follows an Express.js RESTful API architecture:
 - **ORM**: Drizzle ORM with zod schema validation
 - **Session Management**: Connect-pg-simple for PostgreSQL session storage
 - **Current Implementation**: In-memory storage for development (MemStorage class)
+- **Anonymous Tracking**: Session-based usage tracking for non-authenticated users using `anon_${sessionId}` prefix
 
 ### Authentication & Authorization
-The application architecture includes:
-- **User Management**: Basic user schema with username/password authentication
-- **Session Handling**: Express sessions with PostgreSQL backing store
-- **Security**: Prepared for implementation of authentication middleware
+The application now supports both authenticated and anonymous usage:
+- **Anonymous Usage**: Free tier (3 images/day) requires no authentication, tracked by session ID
+- **User Management**: Basic user schema with username/password authentication for premium features
+- **Session Handling**: Express sessions with PostgreSQL backing store, also used for anonymous tracking
+- **Smart Authentication**: Only prompts for login when anonymous users exceed daily limits
+- **Progressive Enhancement**: Seamless upgrade path from anonymous to authenticated premium user
 
 ### File Processing Architecture
 - **Upload Handling**: Client-side file validation and progress tracking

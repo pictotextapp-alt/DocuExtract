@@ -143,7 +143,7 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
-// Hook for usage data
+// Hook for usage data - now works for both authenticated and anonymous users
 export function useUsage() {
   return useQuery({
     queryKey: ["usage"],
@@ -153,15 +153,12 @@ export function useUsage() {
       });
       
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Not authenticated");
-        }
         throw new Error("Failed to fetch usage");
       }
       
       return response.json();
     },
-    retry: false,
-    enabled: true, // Always try to fetch usage when component mounts
+    retry: 1,
+    enabled: true, // Always try to fetch usage for both authenticated and anonymous users
   });
 }

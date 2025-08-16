@@ -102,10 +102,7 @@ export default function SimpleTextExtractor() {
       return;
     }
 
-    if (!isAuthenticated) {
-      setShowAuthModal(true);
-      return;
-    }
+    // No longer require authentication upfront - let the server decide
 
     setIsProcessing(true);
     setProcessingProgress(0);
@@ -133,7 +130,12 @@ export default function SimpleTextExtractor() {
         const errorData = await response.json();
         
         if (response.status === 429 && errorData.limitExceeded) {
-          // Show upgrade modal for limit exceeded
+          // Check if authentication is required for anonymous users
+          if (errorData.requiresAuth && !isAuthenticated) {
+            setShowAuthModal(true);
+            return;
+          }
+          // Otherwise show upgrade modal for authenticated users
           setShowUpgradeModal(true);
           return;
         }
@@ -372,13 +374,11 @@ export default function SimpleTextExtractor() {
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Processing... {processingProgress}%
               </>
-            ) : isAuthenticated ? (
+            ) : (
               <>
                 <Zap className="mr-2 h-5 w-5" />
                 Extract Text
               </>
-            ) : (
-              "Login to Extract Text"
             )}
           </Button>
 

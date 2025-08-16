@@ -3,7 +3,14 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { z } from "zod";
 import { createUser, authenticateUser, getUserById } from "./auth";
-import { canProcessImage, getDailyUsage, recordImageProcessing } from "./usage-tracking";
+import { 
+  canProcessImage, 
+  getDailyUsage, 
+  recordImageProcessing,
+  getAnonymousUsage,
+  canProcessImageAnonymous,
+  recordAnonymousImageProcessing
+} from "./usage-tracking";
 import { OCRService } from "./ocr-service";
 import { insertUserSchema, loginSchema } from "@shared/schema";
 
@@ -118,22 +125,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/usage", requireAuth, async (req, res) => {
+  // Anonymous usage endpoint
+  app.get("/api/usage", async (req, res) => {
     try {
-      const userId = (req as any).session.userId;
-      const usage = await getDailyUsage(userId);
+      const session = (req as any).session;
       
-      res.json(usage);
+      if (session.userId) {
+        // Authenticated user
+        const usage = await getDailyUsage(session.userId);
+        res.json(usage);
+      } else {
+        // Anonymous user - use session ID for tracking
+        if (!session.id) {
+          return res.status(400).json({ error: "Session not available" });
+        }
+        const usage = await getAnonymousUsage(session.id);
+        res.json(usage);
+      }
     } catch (error) {
       console.error("Usage check error:", error);
       res.status(500).json({ error: "Failed to check usage" });
     }
   });
 
-  // OCR Processing endpoint
-  app.post("/api/extract-text", requireAuth, upload.single('image'), async (req, res) => {
+  // OCR Processing endpoint - now supports anonymous users
+  app.post("/api/extract-text", upload.single('image'), async (req, res) => {
     try {
-      const userId = (req as any).session.userId;
+      const session = (req as any).session;
       const useFiltering = req.body.useFiltering === 'true';
       
       if (!req.file) {
@@ -147,13 +165,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      let usageCheck: any;
+      let isAuthenticated = !!session.userId;
+
+      if (isAuthenticated) {
+        // Authenticated user
+        usageCheck = await canProcessImage(session.userId);
+      } else {
+        // Anonymous user - use session ID for tracking
+        if (!session.id) {
+          return res.status(400).json({ error: "Session not available" });
+        }
+        usageCheck = await canProcessImageAnonymous(session.id);
+      }
+
       // Check usage limits
-      const usageCheck = await canProcessImage(userId);
       if (!usageCheck.canProcess) {
         return res.status(429).json({ 
           error: usageCheck.reason,
           limitExceeded: true,
-          usage: usageCheck.usage
+          usage: usageCheck.usage,
+          requiresAuth: !isAuthenticated // Tell frontend to show auth modal
         });
       }
 
@@ -161,7 +193,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await ocrService.extractTextFromImage(req.file.buffer, useFiltering);
       
       // Record the usage
-      await recordImageProcessing(userId, result.wordCount, result.confidence);
+      if (isAuthenticated) {
+        await recordImageProcessing(session.userId, result.wordCount, result.confidence);
+      } else {
+        await recordAnonymousImageProcessing(session.id, result.wordCount, result.confidence);
+      }
       
       res.json(result);
     } catch (error) {
