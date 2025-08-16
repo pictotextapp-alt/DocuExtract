@@ -37,12 +37,10 @@ const Home = () => {
           Transform any image into editable text with enterprise-grade accuracy. Perfect for documents, screenshots, and handwritten notes.
         </p>
       </div>
-
       {/* Simple Text Extractor Component */}
       <div className="mb-16">
         <SimpleTextExtractor />
       </div>
-
       {/* Features Grid */}
       <div className="grid md:grid-cols-3 gap-8 mb-16">
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
@@ -69,7 +67,6 @@ const Home = () => {
           <p className="text-slate-600">Context-aware text extraction with intelligent filtering to remove UI noise and preserve meaningful content.</p>
         </div>
       </div>
-
       {/* Enhanced Features Section */}
       <div className="bg-white py-16">
         <div className="text-center mb-12">
@@ -111,7 +108,6 @@ const Home = () => {
           </div>
         </div>
       </div>
-
       {/* Stats Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-12 text-white text-center">
         <h2 className="text-3xl font-bold mb-8">Proven Performance</h2>
@@ -130,7 +126,6 @@ const Home = () => {
           </div>
         </div>
       </div>
-
       {/* FAQ Section */}
       <div className="bg-slate-50 py-16">
         <div className="max-w-4xl mx-auto">
@@ -244,9 +239,7 @@ const Home = () => {
                 <i id="icon-free" className="fas fa-plus text-slate-400"></i>
               </button>
               <div id="faq-free" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  Yes! PictoText is completely free with no registration required. Simply upload your image and extract text instantly without any limitations or hidden costs.
-                </p>
+                <p className="text-slate-600">Yes! PictoText is completely free with no registration required. Simply upload your image and extract text instantly. However, the free use is limited to 3 images per day. Also, free tier users cannot view their previous image to text history.</p>
               </div>
             </div>
 
