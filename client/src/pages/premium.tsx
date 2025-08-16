@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useAuth, useUsage } from "@/hooks/useAuth";
 import { PremiumUpgradeModal } from "@/components/premium-upgrade-modal";
+import { AuthModal } from "@/components/auth-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Check, Zap, Archive, Infinity, Star } from "lucide-react";
+import { Crown, Check, Zap, Archive, Infinity, Star, LogIn, UserPlus } from "lucide-react";
 
 export default function Premium() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { user, isAuthenticated } = useAuth();
   const { data: usage } = useUsage();
 
@@ -112,7 +115,34 @@ export default function Premium() {
           <CardContent className="pt-4">
             <div className="text-center mb-6">
               {!isAuthenticated ? (
-                <p className="text-slate-600 mb-4">Sign in to upgrade to Premium</p>
+                <div className="space-y-4">
+                  <p className="text-slate-600 mb-4">Sign in to upgrade to Premium</p>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthModalOpen(true);
+                      }}
+                      variant="outline" 
+                      className="flex-1"
+                      data-testid="button-signin"
+                    >
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Sign In
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setAuthMode("register");
+                        setAuthModalOpen(true);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                      data-testid="button-register"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Register
+                    </Button>
+                  </div>
+                </div>
               ) : user?.isPremium ? (
                 <div className="text-center">
                   <Badge className="bg-gradient-to-r from-green-400 to-green-600 text-white mb-2">
@@ -199,6 +229,14 @@ export default function Premium() {
         isOpen={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
         currentUsage={usage}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+        onModeChange={setAuthMode}
       />
     </div>
   );
