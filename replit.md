@@ -1,20 +1,19 @@
-# TextExtract Pro
+# PictoText
 
 ## Overview
 
-TextExtract Pro is a modern web application that replicates Canva's "Grab Text" feature for extracting and manipulating text from images. The application uses advanced OCR technology with content-aware inpainting to cleanly remove text from backgrounds, then presents the text as editable DOM elements that can be moved, styled, and customized independently. It features line-based text detection, soft mask generation, and sophisticated inpainting algorithms for professional-quality results.
+PictoText is a professional web application for extracting and manipulating text from images using advanced OCR technology. The application uses advanced OCR technology with content-aware inpainting to cleanly remove text from backgrounds, then presents the text as editable DOM elements that can be moved, styled, and customized independently. It features line-based text detection, soft mask generation, and sophisticated inpainting algorithms for professional-quality results.
 
-## Recent Changes (August 15, 2025)
+## Recent Changes (August 16, 2025)
 
-✓ **Enhanced OCR Processing**: Implemented word-to-line grouping algorithm that merges detected words into coherent text lines using y-overlap analysis and proximity detection
-✓ **Professional-Grade Inpainting**: Implemented TELEA-inspired fast marching method with sophisticated background reconstruction using context analysis from 8 sampling regions
-✓ **Advanced Mask Generation**: Created soft feathered masks with 6px expansion and 4px Gaussian feathering for seamless edge blending
-✓ **Context-Aware Sampling**: Multi-directional texture analysis with weighted proximity sampling and intelligent pattern continuity detection
-✓ **Line-Based Processing**: Replaced word-by-word processing with line-based approach for cleaner masks and fewer seams
-✓ **Font Property Estimation**: Added intelligent estimation of font size (bbox height × 0.8), letter spacing, and weight based on detected text geometry
-✓ **DOM-Based Text Layers**: Implemented Canva-style editable text elements with drag-and-drop, rotation, styling, and independent manipulation
-✓ **Professional Export System**: Canvas-based rendering that merges text layers back onto cleaned background with proper layering and transformations
-✓ **Streamlined Workflow**: Single-click "Extract Text" button automatically triggers OCR, inpainting, and text layer creation without additional steps
+✓ **PictoText Rebrand**: Complete visual rebrand with professional SVG logo and gradient styling
+✓ **Enhanced OCR Processing**: OCR.space API integration with advanced image preprocessing and confidence scoring
+✓ **Professional UI**: Clean navigation with reduced menu items, modern typography and enterprise-grade appearance
+✓ **Smart Image Compression**: Automatic compression for large files with quality optimization
+✓ **Intelligent Filtering**: Context-aware text extraction that removes UI noise while preserving meaningful content
+✓ **High-Quality Logo**: Custom SVG logo with document and text extraction visual metaphor
+✓ **Streamlined Navigation**: Simplified to Home and Premium only, removing unnecessary menu clutter
+✓ **Professional Branding**: "Transform Images to Editable Text" tagline with enterprise positioning
 
 ## User Preferences
 

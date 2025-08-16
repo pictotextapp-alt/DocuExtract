@@ -10,11 +10,6 @@ const Navigation = () => {
 
   const navItems = [
     { path: "/", label: "Home", icon: "fas fa-home" },
-    { path: "/upload", label: "Upload", icon: "fas fa-upload" },
-    { path: "/photo-extract", label: "Photo Extract", icon: "fas fa-camera" },
-    { path: "/extract", label: "Extract Text", icon: "fas fa-magic" },
-    { path: "/history", label: "History", icon: "fas fa-history" },
-    { path: "/settings", label: "Settings", icon: "fas fa-cog" },
   ];
 
   const isActive = (path: string) => {
@@ -30,8 +25,29 @@ const Navigation = () => {
           {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <i className="fas fa-file-text text-2xl text-blue-600 mr-3"></i>
-              <span className="font-bold text-xl text-slate-900">TextExtract Pro</span>
+              <svg width="32" height="32" viewBox="0 0 80 80" className="mr-3">
+                <defs>
+                  <linearGradient id="navLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#3B82F6" />
+                    <stop offset="100%" stopColor="#8B5CF6" />
+                  </linearGradient>
+                </defs>
+                <rect width="80" height="80" rx="16" fill="url(#navLogoGradient)" />
+                <rect x="12" y="12" width="56" height="42" rx="4" fill="white" opacity="0.9" />
+                <rect x="16" y="16" width="12" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="20" width="20" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="24" width="16" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="28" width="24" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="32" width="18" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="36" width="14" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="40" width="22" height="2" rx="1" fill="#3B82F6" />
+                <rect x="16" y="44" width="20" height="2" rx="1" fill="#3B82F6" />
+                <path d="M20 58 L32 66 L44 58 L56 66" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" />
+                <circle cx="24" cy="62" r="2" fill="white" />
+                <circle cx="36" cy="62" r="2" fill="white" />
+                <circle cx="48" cy="62" r="2" fill="white" />
+              </svg>
+              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">PictoText</span>
             </div>
           </div>
 
