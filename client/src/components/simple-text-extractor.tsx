@@ -139,14 +139,17 @@ const SimpleTextExtractor = () => {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-4">
-          📄 Text Extractor
+        <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+          TextExtract Pro
         </h1>
-        <p className="text-lg text-slate-600">
-          Upload an image and extract all text content using advanced OCR
+        <p className="text-xl text-slate-700 font-medium mb-2">
+          Professional Text Extraction from Images
         </p>
-        <p className="text-sm text-slate-500">
-          Powered by OCR.space API - professional-grade text recognition
+        <p className="text-base text-slate-500">
+          Extract text from any image instantly with AI-powered OCR technology
+        </p>
+        <p className="text-sm text-slate-400 mt-3">
+          Supports JPG, PNG, WEBP, GIF, BMP • Max file size: 10MB
         </p>
       </div>
 
