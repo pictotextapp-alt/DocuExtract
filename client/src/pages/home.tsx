@@ -141,47 +141,221 @@ const Home = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">What file formats are supported?</h3>
-              <p className="text-slate-600">
-                PictoText supports JPG, PNG, WEBP, GIF, and BMP image formats. Files can be up to 10MB in size for optimal processing.
-              </p>
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-safety');
+                  const icon = document.getElementById('icon-safety');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">Is my data safe and private?</h3>
+                <i id="icon-safety" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-safety" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  Yes, your privacy is our priority. Images are processed securely through encrypted connections and are never stored permanently on our servers. Your data is automatically deleted after processing.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">Is PictoText really free to use?</h3>
-              <p className="text-slate-600">
-                Yes! PictoText is completely free with no registration required. Simply upload your image and extract text instantly.
-              </p>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-how-works');
+                  const icon = document.getElementById('icon-how-works');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">How can you copy text from images?</h3>
+                <i id="icon-how-works" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-how-works" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  Simply upload your image and PictoText automatically detects and extracts all text using advanced OCR technology. The extracted text appears in an editable box where you can select, copy, and paste it anywhere you need.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">How accurate is the text recognition?</h3>
-              <p className="text-slate-600">
-                Our OCR technology achieves 95%+ confidence levels with intelligent filtering that removes UI noise and preserves meaningful content.
-              </p>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-mobile');
+                  const icon = document.getElementById('icon-mobile');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">How do you turn image to text on mobile?</h3>
+                <i id="icon-mobile" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-mobile" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  PictoText works perfectly on mobile devices. Simply open the website in your mobile browser, tap "Choose File" or drag and drop, then select a photo from your camera roll or take a new picture. The text extraction works the same way as on desktop.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">What languages are supported?</h3>
-              <p className="text-slate-600">
-                PictoText recognizes text in multiple languages including English, Spanish, French, German, Italian, Portuguese, and many more.
-              </p>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-free');
+                  const icon = document.getElementById('icon-free');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">Is PictoText really free to use?</h3>
+                <i id="icon-free" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-free" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  Yes! PictoText is completely free with no registration required. Simply upload your image and extract text instantly without any limitations or hidden costs.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">How long does processing take?</h3>
-              <p className="text-slate-600">
-                Most images are processed in under 5 seconds. Processing time may vary based on image size and complexity.
-              </p>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-accuracy');
+                  const icon = document.getElementById('icon-accuracy');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">How accurate is the text recognition?</h3>
+                <i id="icon-accuracy" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-accuracy" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  Our OCR technology achieves 95%+ confidence levels with intelligent filtering that removes UI noise and preserves meaningful content for clean, accurate results.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">Is my data secure?</h3>
-              <p className="text-slate-600">
-                Your images are processed securely and are not stored permanently. We prioritize your privacy and data security.
-              </p>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-formats');
+                  const icon = document.getElementById('icon-formats');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">What file formats are supported?</h3>
+                <i id="icon-formats" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-formats" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  PictoText supports JPG, PNG, WEBP, GIF, and BMP image formats. Files can be up to 10MB in size for optimal processing performance.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-languages');
+                  const icon = document.getElementById('icon-languages');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">What languages are supported?</h3>
+                <i id="icon-languages" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-languages" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  PictoText recognizes text in multiple languages including English, Spanish, French, German, Italian, Portuguese, Chinese, Japanese, and many more.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+              <button 
+                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                onClick={() => {
+                  const content = document.getElementById('faq-speed');
+                  const icon = document.getElementById('icon-speed');
+                  if (content.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                  } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                  }
+                }}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">How long does processing take?</h3>
+                <i id="icon-speed" className="fas fa-plus text-slate-400"></i>
+              </button>
+              <div id="faq-speed" className="hidden px-6 pb-6">
+                <p className="text-slate-600">
+                  Most images are processed in under 5 seconds. Processing time may vary slightly based on image size and complexity, but results are typically delivered very quickly.
+                </p>
+              </div>
             </div>
           </div>
         </div>
