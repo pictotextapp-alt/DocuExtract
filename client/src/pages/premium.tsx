@@ -1,291 +1,205 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { useAuth, useUsage } from "@/hooks/useAuth";
+import { PremiumUpgradeModal } from "@/components/premium-upgrade-modal";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Crown, Check, Zap, Archive, Infinity, Star } from "lucide-react";
 
-const Premium = () => {
-  const { toast } = useToast();
-
-  const handleUpgradePro = () => {
-    toast({
-      title: "Redirecting to checkout",
-      description: "You will be redirected to complete your Pro subscription.",
-    });
-  };
-
-  const handleContactSales = () => {
-    toast({
-      title: "Contact Sales",
-      description: "Our sales team will contact you shortly.",
-    });
-  };
+export default function Premium() {
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const { data: usage } = useUsage();
 
   const features = [
     {
-      feature: "Monthly Extractions",
-      basic: "10",
-      pro: "Unlimited",
-      enterprise: "Unlimited"
+      icon: <Infinity className="h-6 w-6 text-green-500" />,
+      title: "Unlimited OCR Extractions",
+      description: "Process as many images as you need with no daily limits",
+      free: "3 per day",
+      premium: "Unlimited"
     },
     {
-      feature: "File Size Limit",
-      basic: "5MB",
-      pro: "50MB", 
-      enterprise: "100MB"
+      icon: <Archive className="h-6 w-6 text-blue-500" />,
+      title: "1GB Storage History",
+      description: "Keep your extraction history and original images safely stored",
+      free: "No storage",
+      premium: "1GB included"
     },
     {
-      feature: "Batch Processing",
-      basic: false,
-      pro: true,
-      enterprise: true
+      icon: <Zap className="h-6 w-6 text-yellow-500" />,
+      title: "Priority Processing",
+      description: "Faster OCR processing with enhanced accuracy algorithms",
+      free: "Standard speed",
+      premium: "Priority queue"
     },
     {
-      feature: "API Access",
-      basic: false,
-      pro: true,
-      enterprise: true
-    },
-    {
-      feature: "Team Collaboration",
-      basic: false,
-      pro: false,
-      enterprise: true
-    }
-  ];
-
-  const faqs = [
-    {
-      question: "Can I cancel my subscription anytime?",
-      answer: "Yes, you can cancel your subscription at any time. You'll continue to have access to premium features until the end of your billing period."
-    },
-    {
-      question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards, PayPal, and bank transfers for Enterprise plans. All payments are processed securely."
-    },
-    {
-      question: "Is there a free trial for premium plans?",
-      answer: "Yes! We offer a 14-day free trial for all premium plans. No credit card required to start your trial."
+      icon: <Star className="h-6 w-6 text-purple-500" />,
+      title: "Advanced Features",
+      description: "Access to premium OCR engines and advanced text formatting",
+      free: "Basic OCR",
+      premium: "Advanced OCR"
     }
   ];
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
-          <i className="fas fa-crown mr-2"></i>Premium Features
+    <div className="container mx-auto py-12 px-4 max-w-6xl">
+      {/* Header */}
+      <div className="text-center mb-12">
+        <div className="flex items-center justify-center mb-6">
+          <Crown className="h-16 w-16 text-amber-500 mr-4" />
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
+            PictoText Premium
+          </h1>
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6">
-          Unlock the Full Power of
-          <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            TextExtract Pro
-          </span>
-        </h1>
-        <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-          Get unlimited extractions, advanced features, and priority support with our premium plans.
+        <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+          Unlock unlimited OCR extractions and professional features for serious users
         </p>
       </div>
 
-      {/* Pricing Cards */}
-      <div className="grid md:grid-cols-3 gap-8 mb-16">
-        {/* Basic Plan */}
-        <Card>
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Basic</h3>
-              <p className="text-slate-600 mb-6">Perfect for occasional use</p>
-              <div className="text-4xl font-bold text-slate-900 mb-2">
-                Free
+      {/* Current Status */}
+      {isAuthenticated && (
+        <Card className="mb-8 max-w-2xl mx-auto">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">Current Plan</h3>
+                {user?.isPremium ? (
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-gradient-to-r from-amber-400 to-amber-600 text-white">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Premium
+                    </Badge>
+                    <span className="text-slate-600">Unlimited usage</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">Free Plan</Badge>
+                    <span className="text-slate-600">
+                      {usage ? `${usage.imageCount}/${usage.dailyLimit}` : "0/3"} images today
+                    </span>
+                  </div>
+                )}
               </div>
-              <p className="text-slate-500">Forever</p>
+              {!user?.isPremium && (
+                <Button 
+                  onClick={() => setUpgradeModalOpen(true)}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                  data-testid="button-upgrade-hero"
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade Now
+                </Button>
+              )}
             </div>
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">10 extractions per month</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Basic OCR accuracy</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">5MB file size limit</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Standard support</span>
-              </li>
-            </ul>
-            <Button variant="outline" className="w-full" data-testid="button-current-plan">
-              Current Plan
-            </Button>
           </CardContent>
         </Card>
+      )}
 
-        {/* Pro Plan (Highlighted) */}
-        <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white relative overflow-hidden">
-          <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold">
-            Most Popular
-          </div>
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <p className="text-blue-100 mb-6">For power users and professionals</p>
-              <div className="text-4xl font-bold mb-2">
-                $19
-                <span className="text-xl font-normal">/month</span>
-              </div>
-              <p className="text-blue-200">Billed monthly</p>
+      {/* Pricing Card */}
+      <div className="max-w-md mx-auto mb-12">
+        <Card className="border-2 border-amber-200 shadow-lg">
+          <CardHeader className="text-center pb-2">
+            <div className="flex items-center justify-center mb-2">
+              <Crown className="h-8 w-8 text-amber-500" />
             </div>
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>Unlimited extractions</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>Advanced OCR accuracy</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>50MB file size limit</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>Batch processing</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>API access</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-300 mr-3"></i>
-                <span>Priority support</span>
-              </li>
-            </ul>
-            <Button 
-              className="w-full bg-white text-blue-600 hover:bg-blue-50" 
-              onClick={handleUpgradePro}
-              data-testid="button-upgrade-pro"
-            >
-              Upgrade to Pro
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Enterprise Plan */}
-        <Card>
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Enterprise</h3>
-              <p className="text-slate-600 mb-6">For teams and organizations</p>
-              <div className="text-4xl font-bold text-slate-900 mb-2">
-                $99
-                <span className="text-xl font-normal">/month</span>
-              </div>
-              <p className="text-slate-500">Per team</p>
+            <CardTitle className="text-2xl">Premium Plan</CardTitle>
+            <div className="text-4xl font-bold text-amber-600 mt-2">
+              $4.99
+              <span className="text-lg font-normal text-slate-500">/month</span>
             </div>
-            <ul className="space-y-4 mb-8">
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Everything in Pro</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Team collaboration</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Custom integrations</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">Advanced analytics</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-check text-green-500 mr-3"></i>
-                <span className="text-slate-700">24/7 dedicated support</span>
-              </li>
-            </ul>
-            <Button 
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white"
-              onClick={handleContactSales}
-              data-testid="button-contact-sales"
-            >
-              Contact Sales
-            </Button>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-center mb-6">
+              {!isAuthenticated ? (
+                <p className="text-slate-600 mb-4">Sign in to upgrade to Premium</p>
+              ) : user?.isPremium ? (
+                <div className="text-center">
+                  <Badge className="bg-gradient-to-r from-green-400 to-green-600 text-white mb-2">
+                    <Check className="w-3 h-3 mr-1" />
+                    Active
+                  </Badge>
+                  <p className="text-slate-600">You're already a Premium member!</p>
+                </div>
+              ) : (
+                <Button 
+                  onClick={() => setUpgradeModalOpen(true)}
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-3 text-lg"
+                  data-testid="button-upgrade-main"
+                >
+                  <Crown className="w-5 h-5 mr-2" />
+                  Get Premium Now
+                </Button>
+              )}
+            </div>
+            <div className="text-sm text-slate-500 text-center">
+              Cancel anytime • Secure payment via PayPal
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Feature Comparison */}
-      <Card className="mb-16">
-        <CardContent className="p-0">
-          <div className="px-8 py-6 border-b border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-900">Feature Comparison</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="text-left py-4 px-8 font-semibold text-slate-900">Feature</th>
-                  <th className="text-center py-4 px-6 font-semibold text-slate-900">Basic</th>
-                  <th className="text-center py-4 px-6 font-semibold text-slate-900">Pro</th>
-                  <th className="text-center py-4 px-6 font-semibold text-slate-900">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {features.map((feature, index) => (
-                  <tr key={index}>
-                    <td className="py-4 px-8 text-slate-700">{feature.feature}</td>
-                    <td className="py-4 px-6 text-center text-slate-600">
-                      {typeof feature.basic === 'boolean' ? (
-                        <i className={`fas ${feature.basic ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
-                      ) : (
-                        feature.basic
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-center text-slate-600">
-                      {typeof feature.pro === 'boolean' ? (
-                        <i className={`fas ${feature.pro ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
-                      ) : (
-                        <span className={feature.pro === 'Unlimited' ? 'text-green-600' : 'text-slate-600'}>
-                          {feature.pro}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-center text-slate-600">
-                      {typeof feature.enterprise === 'boolean' ? (
-                        <i className={`fas ${feature.enterprise ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
-                      ) : (
-                        <span className={feature.enterprise === 'Unlimited' ? 'text-green-600' : 'text-slate-600'}>
-                          {feature.enterprise}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* FAQ Section */}
-      <div className="bg-slate-50 rounded-2xl p-8">
-        <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
-        <div className="max-w-3xl mx-auto space-y-6">
-          {faqs.map((faq, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-slate-900 mb-2">{faq.question}</h3>
-                <p className="text-slate-600">{faq.answer}</p>
+      {/* Features Comparison */}
+      <div className="mb-12">
+        <h2 className="text-3xl font-bold text-center mb-8">Feature Comparison</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <Card key={index} className="h-full">
+              <CardHeader>
+                <div className="flex items-center mb-3">
+                  {feature.icon}
+                  <CardTitle className="text-lg ml-3">{feature.title}</CardTitle>
+                </div>
+                <p className="text-slate-600 text-sm">{feature.description}</p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">Free:</span>
+                    <span className="text-sm">{feature.free}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-500">Premium:</span>
+                    <span className="text-sm font-semibold text-amber-600">{feature.premium}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
+
+      {/* FAQ Section */}
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Frequently Asked Questions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h4 className="font-semibold mb-2">What happens to my free extractions when I upgrade?</h4>
+            <p className="text-slate-600">Your usage counter resets immediately upon upgrading, giving you unlimited extractions right away.</p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">Can I cancel my subscription anytime?</h4>
+            <p className="text-slate-600">Yes, you can cancel your Premium subscription at any time. You'll continue to have Premium access until the end of your billing period.</p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">Is my payment information secure?</h4>
+            <p className="text-slate-600">Absolutely. All payments are processed securely through PayPal. We never store your payment information on our servers.</p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">What file formats are supported?</h4>
+            <p className="text-slate-600">We support all major image formats including JPG, PNG, WEBP, GIF, and BMP with files up to 10MB.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Premium Upgrade Modal */}
+      <PremiumUpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentUsage={usage}
+      />
     </div>
   );
-};
-
-export default Premium;
+}

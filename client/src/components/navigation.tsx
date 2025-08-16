@@ -1,12 +1,30 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth, useUsage } from "@/hooks/useAuth";
+import { AuthModal } from "./auth-modal";
+import { PremiumUpgradeModal } from "./premium-upgrade-modal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut, Crown, Zap } from "lucide-react";
 import MobileMenu from "./mobile-menu";
 
 const Navigation = () => {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const { data: usage } = useUsage();
 
   const navItems = [
     { path: "/", label: "Home", icon: "fas fa-home" },
@@ -53,30 +71,99 @@ const Navigation = () => {
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <div className="ml-10 flex items-baseline space-x-4">
-              {navItems.map((item) => (
+            <div className="flex items-center space-x-4">
+              {/* Navigation Links */}
+              <div className="flex items-baseline space-x-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    data-testid={`nav-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive(item.path)
+                        ? "text-slate-900"
+                        : "text-slate-600 hover:text-blue-600"
+                    }`}
+                  >
+                    <i className={`${item.icon} mr-2`}></i>
+                    {item.label}
+                  </Link>
+                ))}
                 <Link
-                  key={item.path}
-                  href={item.path}
-                  data-testid={`nav-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.path)
-                      ? "text-slate-900"
-                      : "text-slate-600 hover:text-blue-600"
-                  }`}
+                  href="/premium"
+                  data-testid="nav-link-premium"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all"
                 >
-                  <i className={`${item.icon} mr-2`}></i>
-                  {item.label}
+                  <Crown className="w-4 h-4 mr-2" />
+                  Premium
                 </Link>
-              ))}
-              <Link
-                href="/premium"
-                data-testid="nav-link-premium"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all"
-              >
-                <i className="fas fa-crown mr-2"></i>
-                Premium
-              </Link>
+              </div>
+
+              {/* Authentication Section */}
+              <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
+                {isLoading ? (
+                  <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                ) : isAuthenticated && user ? (
+                  <div className="flex items-center space-x-3">
+                    {/* Usage Badge for Free Users */}
+                    {!user.isPremium && usage && (
+                      <Badge variant="outline" className="text-xs">
+                        {usage.imageCount}/{usage.dailyLimit} images
+                      </Badge>
+                    )}
+                    
+                    {/* Premium Badge */}
+                    {user.isPremium && (
+                      <Badge className="bg-gradient-to-r from-amber-400 to-amber-600 text-white">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Premium
+                      </Badge>
+                    )}
+
+                    {/* User Menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" data-testid="user-menu-trigger">
+                          <User className="w-4 h-4 mr-2" />
+                          {user.username}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled className="font-medium">
+                          {user.email}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {!user.isPremium && (
+                          <DropdownMenuItem 
+                            onClick={() => setUpgradeModalOpen(true)}
+                            data-testid="menu-upgrade"
+                          >
+                            <Zap className="w-4 h-4 mr-2" />
+                            Upgrade to Premium
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={logout}
+                          data-testid="menu-logout"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setAuthModalOpen(true)}
+                    data-testid="button-sign-in"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
@@ -102,6 +189,19 @@ const Navigation = () => {
           currentLocation={location}
         />
       </div>
+
+      {/* Authentication Modal */}
+      <AuthModal 
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
+
+      {/* Premium Upgrade Modal */}
+      <PremiumUpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentUsage={usage}
+      />
     </nav>
   );
 };

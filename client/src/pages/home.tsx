@@ -37,15 +37,20 @@ const Home = () => {
           Transform any image into editable text with enterprise-grade accuracy. Perfect for documents, screenshots, and handwritten notes.
         </p>
       </div>
+
       {/* Simple Text Extractor Component */}
       <div className="mb-16">
         <SimpleTextExtractor />
       </div>
+
       {/* Features Grid */}
       <div className="grid md:grid-cols-3 gap-8 mb-16">
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-            <i className="fas fa-eye text-blue-600 text-xl"></i>
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
           </div>
           <h3 className="text-xl font-semibold text-slate-900 mb-4">Enterprise-Grade OCR</h3>
           <p className="text-slate-600">Advanced AI-powered text recognition with intelligent preprocessing and confidence scoring for maximum accuracy.</p>
@@ -53,7 +58,9 @@ const Home = () => {
         
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-6">
-            <i className="fas fa-bolt text-green-600 text-xl"></i>
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
           </div>
           <h3 className="text-xl font-semibold text-slate-900 mb-4">Instant Processing</h3>
           <p className="text-slate-600">Extract text from images in seconds with automatic compression and smart filtering for clean results.</p>
@@ -61,12 +68,15 @@ const Home = () => {
         
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-6">
-            <i className="fas fa-shield-alt text-purple-600 text-xl"></i>
+            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
           <h3 className="text-xl font-semibold text-slate-900 mb-4">Professional Quality</h3>
           <p className="text-slate-600">Context-aware text extraction with intelligent filtering to remove UI noise and preserve meaningful content.</p>
         </div>
       </div>
+
       {/* Enhanced Features Section */}
       <div className="bg-white py-16">
         <div className="text-center mb-12">
@@ -79,17 +89,21 @@ const Home = () => {
         <div className="grid md:grid-cols-3 gap-8">
           <div className="text-center p-6">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-gift text-white text-2xl"></i>
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-3">Free to Use</h3>
+            <h3 className="text-xl font-semibold text-slate-900 mb-3">Free Use</h3>
             <p className="text-slate-600">
-              No registration required. Extract text from images instantly without any cost or limitations
+              Get 3 free image extractions daily. No hidden costs or registration required to start.
             </p>
           </div>
           
           <div className="text-center p-6">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-images text-white text-2xl"></i>
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-3">Multiple Formats</h3>
             <p className="text-slate-600">
@@ -99,7 +113,9 @@ const Home = () => {
           
           <div className="text-center p-6">
             <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-globe text-white text-2xl"></i>
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+              </svg>
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-3">Multi-Language Support</h3>
             <p className="text-slate-600">
@@ -108,6 +124,7 @@ const Home = () => {
           </div>
         </div>
       </div>
+
       {/* Stats Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-12 text-white text-center">
         <h2 className="text-3xl font-bold mb-8">Proven Performance</h2>
@@ -123,233 +140,6 @@ const Home = () => {
           <div>
             <div className="text-4xl font-bold mb-2" data-testid="stat-processing">Under 5s</div>
             <div className="text-blue-100">Processing Time</div>
-          </div>
-        </div>
-      </div>
-      {/* FAQ Section */}
-      <div className="bg-slate-50 py-16">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
-            <p className="text-lg text-slate-600">
-              Everything you need to know about PictoText OCR
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-safety');
-                  const icon = document.getElementById('icon-safety');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">Is my data safe and private?</h3>
-                <i id="icon-safety" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-safety" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  Yes, your privacy is our priority. Images are processed securely through encrypted connections and are never stored permanently on our servers. Your data is automatically deleted after processing.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-how-works');
-                  const icon = document.getElementById('icon-how-works');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">How can you copy text from images?</h3>
-                <i id="icon-how-works" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-how-works" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  Simply upload your image and PictoText automatically detects and extracts all text using advanced OCR technology. The extracted text appears in an editable box where you can select, copy, and paste it anywhere you need.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-mobile');
-                  const icon = document.getElementById('icon-mobile');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">How do you turn image to text on mobile?</h3>
-                <i id="icon-mobile" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-mobile" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  PictoText works perfectly on mobile devices. Simply open the website in your mobile browser, tap "Choose File" or drag and drop, then select a photo from your camera roll or take a new picture. The text extraction works the same way as on desktop.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-free');
-                  const icon = document.getElementById('icon-free');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">Is PictoText really free to use?</h3>
-                <i id="icon-free" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-free" className="hidden px-6 pb-6">
-                <p className="text-slate-600">Yes! PictoText is completely free with no registration required. Simply upload your image and extract text instantly. However, the free use is limited to 3 images per day. Also, free tier users cannot view their previous image to text history.</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-accuracy');
-                  const icon = document.getElementById('icon-accuracy');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">How accurate is the text recognition?</h3>
-                <i id="icon-accuracy" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-accuracy" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  Our OCR technology achieves 95%+ confidence levels with intelligent filtering that removes UI noise and preserves meaningful content for clean, accurate results.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-formats');
-                  const icon = document.getElementById('icon-formats');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">What file formats are supported?</h3>
-                <i id="icon-formats" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-formats" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  PictoText supports JPG, PNG, WEBP, GIF, and BMP image formats. Files can be up to 10MB in size for optimal processing performance.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-languages');
-                  const icon = document.getElementById('icon-languages');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">What languages are supported?</h3>
-                <i id="icon-languages" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-languages" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  PictoText recognizes text in multiple languages including English, Spanish, French, German, Italian, Portuguese, Chinese, Japanese, and many more.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-              <button 
-                className="w-full p-6 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                onClick={() => {
-                  const content = document.getElementById('faq-speed');
-                  const icon = document.getElementById('icon-speed');
-                  if (content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                  } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                  }
-                }}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">How long does processing take?</h3>
-                <i id="icon-speed" className="fas fa-plus text-slate-400"></i>
-              </button>
-              <div id="faq-speed" className="hidden px-6 pb-6">
-                <p className="text-slate-600">
-                  Most images are processed in under 5 seconds. Processing time may vary slightly based on image size and complexity, but results are typically delivered very quickly.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

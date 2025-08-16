@@ -1,248 +1,242 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import { z } from "zod";
+import { createUser, authenticateUser, getUserById } from "./auth";
+import { canProcessImage, getDailyUsage, recordImageProcessing } from "./usage-tracking";
+import { OCRService } from "./ocr-service";
+import { insertUserSchema, loginSchema } from "@shared/schema";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
+
+// Initialize OCR service
+let ocrService: OCRService;
+try {
+  ocrService = new OCRService();
+} catch (error) {
+  console.warn("OCR Service not initialized:", error);
+}
+
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  next();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Simple OCR text extraction endpoint
-  app.post("/api/extract-text", upload.single('image'), async (req, res) => {
+  // Authentication endpoints
+  app.post("/api/register", async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No image file provided' });
-      }
-
-      const useFiltering = req.body.useFiltering === 'true';
+      const userData = insertUserSchema.parse(req.body);
+      const user = await createUser(userData);
       
-      // Check file size and compress if necessary, also apply preprocessing
-      let processedBuffer = req.file.buffer;
-      const fileSizeKB = req.file.buffer.length / 1024;
+      // Create session
+      (req as any).session.userId = user.id;
       
-      if (fileSizeKB > 900) { // Compress if close to 1MB limit
-        processedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
-      } else {
-        // Apply image preprocessing for better OCR accuracy
-        processedBuffer = await preprocessImage(req.file.buffer, req.file.mimetype);
-      }
-      
-      // Convert buffer to base64
-      const base64Image = processedBuffer.toString('base64');
-      const mimeType = req.file.mimetype;
-      const dataUrl = `data:${mimeType};base64,${base64Image}`;
-
-      // Prepare OCR.space API request with enhanced settings
-      const formData = new FormData();
-      formData.append("base64Image", dataUrl);
-      formData.append("language", "eng");
-      formData.append("OCREngine", "2"); // Engine 2 is more accurate
-      formData.append("detectOrientation", "true"); // Enable orientation detection
-      formData.append("scale", "true");
-      formData.append("isOverlayRequired", "false");
-      formData.append("isTable", "true"); // Better structure detection
-      formData.append("filetype", "jpg");
-      
-      const response = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        headers: {
-          "apikey": process.env.OCR_SPACE_API_KEY || "",
-        },
-        body: formData,
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isPremium: user.isPremium,
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`OCR API request failed: ${response.statusText}`);
-      }
-
-      const ocrResult = await response.json();
-      
-      if (ocrResult.IsErroredOnProcessing) {
-        throw new Error(ocrResult.ErrorMessage || "OCR processing failed");
-      }
-
-      let extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
-      
-      // Calculate confidence based on text quality indicators
-      const confidence = calculateConfidence(extractedText, ocrResult);
-      
-      // Apply filtering if requested
-      let filteredText = extractedText;
-      if (useFiltering && extractedText) {
-        filteredText = filterOCRText(extractedText);
-      }
-
-      const finalText = filteredText || extractedText;
-      const wordCount = finalText.trim().split(/\s+/).filter(word => word.length > 0).length;
-
-      res.json({
-        extractedText: finalText,
-        rawText: extractedText,
-        confidence,
-        wordCount,
-      });
-
     } catch (error) {
-      console.error('OCR extraction error:', error);
-      res.status(500).json({ 
-        error: 'Failed to extract text from image',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error("Registration error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Registration failed" });
     }
   });
 
-  function filterOCRText(text: string): string {
-    console.log("Original OCR text:", text);
-    
-    // Check for completely garbled OCR (lots of symbols but no real words)
-    const hasRealWords = text.match(/\b[A-Za-z]{3,}\b/g);
-    const weirdChars = (text.match(/[¥€£™®©§¶†‡•…‰′″‹›«»]/g) || []).length;
-    const symbolRatio = (text.match(/[^\w\s]/g) || []).length / text.length;
-    
-    console.log("Real words found:", hasRealWords ? hasRealWords.length : 0);
-    console.log("Weird chars:", weirdChars);
-    console.log("Symbol ratio:", symbolRatio);
-    
-    // Only show error message for completely garbled text (very high symbol ratio AND very few real words)
-    if ((!hasRealWords || hasRealWords.length < 3) && (weirdChars > 5 || symbolRatio > 0.6)) {
-      return "OCR could not extract readable text from this image.\n\nThe text appears to be too stylized, decorative, or low resolution for accurate recognition.\n\nTry using:\n• Plain text documents\n• Screenshots with simple fonts\n• High-contrast images\n• Less decorative text styles";
+  app.post("/api/login", async (req, res) => {
+    try {
+      const credentials = loginSchema.parse(req.body);
+      const user = await authenticateUser(credentials);
+      
+      // Create session
+      (req as any).session.userId = user.id;
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isPremium: user.isPremium,
+        }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Login failed" });
     }
-    
-    // Clean up the text by removing obvious social media UI elements but keep meaningful content
-    const lines = text.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
-    
-    const cleanLines = lines.filter(line => {
-      const lowerLine = line.toLowerCase();
-      
-      // Skip obvious UI noise but be less aggressive
-      if (lowerLine.match(/^\d+(\.\d+)?[km]?\s*(like|follow|view|share)s?$/i)) return false; // Only skip standalone like/follow counts
-      if (lowerLine.match(/^(manage|edit|more)$/i)) return false; // Only skip standalone UI words
-      if (lowerLine.match(/^@[a-z0-9_]+$/)) return false; // Skip standalone handles
-      
-      // Keep lines with any readable content (even single words)
-      const readableChars = line.match(/[A-Za-z]/g);
-      return readableChars && readableChars.length >= 2; // Keep if has at least 2 letters
+  });
+
+  app.post("/api/logout", (req, res) => {
+    (req as any).session.destroy(() => {
+      res.json({ success: true });
     });
-    
-    const result = cleanLines.slice(0, 20).join('\n').trim(); // Increased limit to 20 lines
-    console.log("Filtered result:", result);
-    return result;
-  }
+  });
 
-  async function compressImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
-    return new Promise(async (resolve, reject) => {
-      const { createCanvas, loadImage } = await import('canvas');
+  app.get("/api/user", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const user = await getUserById(userId);
       
-      loadImage(buffer).then((img: any) => {
-        // Calculate new dimensions to keep under 900KB
-        let { width, height } = img;
-        const maxDimension = 1200;
-        
-        if (width > maxDimension || height > maxDimension) {
-          const ratio = Math.min(maxDimension / width, maxDimension / height);
-          width = Math.floor(width * ratio);
-          height = Math.floor(height * ratio);
-        }
-        
-        const canvas = createCanvas(width, height);
-        const ctx = canvas.getContext('2d');
-        
-        // Apply preprocessing while compressing
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, width, height);
-        ctx.imageSmoothingEnabled = false; // Better for text
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Try different quality levels until under 900KB
-        let quality = 0.8;
-        let compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
-        
-        while (compressedBuffer.length > 900 * 1024 && quality > 0.3) {
-          quality -= 0.1;
-          compressedBuffer = canvas.toBuffer('image/jpeg', { quality });
-        }
-        
-        resolve(compressedBuffer);
-      }).catch(reject);
-    });
-  }
-
-  async function preprocessImage(buffer: Buffer, mimeType: string): Promise<Buffer> {
-    return new Promise(async (resolve, reject) => {
-      const { createCanvas, loadImage } = await import('canvas');
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
       
-      loadImage(buffer).then((img: any) => {
-        const { width, height } = img;
-        
-        // Create canvas with slight upscaling for better OCR
-        const scale = Math.min(2.0, Math.max(1.2, 1600 / Math.max(width, height)));
-        const newWidth = Math.floor(width * scale);
-        const newHeight = Math.floor(height * scale);
-        
-        const canvas = createCanvas(newWidth, newHeight);
-        const ctx = canvas.getContext('2d');
-        
-        // White background for better contrast
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, newWidth, newHeight);
-        
-        // High quality scaling for text
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, newWidth, newHeight);
-        
-        // Enhance contrast slightly
-        const imageData = ctx.getImageData(0, 0, newWidth, newHeight);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          // Simple contrast enhancement
-          const factor = 1.1;
-          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));     // R
-          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128)); // G
-          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128)); // B
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        const processedBuffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
-        resolve(processedBuffer);
-      }).catch(reject);
-    });
-  }
+      res.json({ user });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
 
-  function calculateConfidence(text: string, ocrResult: any): number {
-    if (!text || text.length === 0) return 0;
-    
-    // Base confidence factors
-    let confidence = 75; // Start with base confidence
-    
-    // Factor 1: Text length and structure
-    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-    if (wordCount > 10) confidence += 5;
-    if (wordCount > 30) confidence += 5;
-    
-    // Factor 2: Proper word ratio
-    const properWords = text.match(/\b[A-Za-z]{3,}\b/g) || [];
-    const totalTokens = text.split(/\s+/).length;
-    const properWordRatio = properWords.length / Math.max(1, totalTokens);
-    confidence += Math.floor(properWordRatio * 15);
-    
-    // Factor 3: Presence of readable sentences
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-    if (sentences.length > 0) confidence += 5;
-    if (sentences.length > 2) confidence += 5;
-    
-    // Factor 4: Low symbol noise
-    const symbolRatio = (text.match(/[^\w\s]/g) || []).length / text.length;
-    if (symbolRatio < 0.1) confidence += 10;
-    else if (symbolRatio < 0.2) confidence += 5;
-    
-    // Factor 5: Proper capitalization patterns
-    const capitalizedWords = text.match(/\b[A-Z][a-z]+/g) || [];
-    if (capitalizedWords.length > 0) confidence += 5;
-    
-    return Math.min(99, Math.max(50, confidence));
-  }
+  app.get("/api/usage", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const usage = await getDailyUsage(userId);
+      
+      res.json(usage);
+    } catch (error) {
+      console.error("Usage check error:", error);
+      res.status(500).json({ error: "Failed to check usage" });
+    }
+  });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // OCR Processing endpoint
+  app.post("/api/extract-text", requireAuth, upload.single('image'), async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const useFiltering = req.body.useFiltering === 'true';
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // Check if OCR service is available
+      if (!ocrService) {
+        return res.status(503).json({ 
+          error: "OCR service is not available. Please check OCR_SPACE_API_KEY configuration." 
+        });
+      }
+
+      // Check usage limits
+      const usageCheck = await canProcessImage(userId);
+      if (!usageCheck.canProcess) {
+        return res.status(429).json({ 
+          error: usageCheck.reason,
+          limitExceeded: true,
+          usage: usageCheck.usage
+        });
+      }
+
+      // Process the image with OCR
+      const result = await ocrService.extractTextFromImage(req.file.buffer, useFiltering);
+      
+      // Record the usage
+      await recordImageProcessing(userId, result.wordCount, result.confidence);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("OCR processing error:", error);
+      
+      if (error instanceof Error) {
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Failed to process image" });
+    }
+  });
+
+  // PayPal integration endpoints
+  app.get("/api/paypal/setup", async (req, res) => {
+    try {
+      // For development, return mock client token
+      // In production, this would generate actual PayPal client token
+      res.json({
+        clientToken: "development-client-token",
+      });
+    } catch (error) {
+      console.error("PayPal setup error:", error);
+      res.status(500).json({ error: "Failed to setup PayPal" });
+    }
+  });
+
+  app.post("/api/paypal/order", requireAuth, async (req, res) => {
+    try {
+      const { amount, currency, intent } = req.body;
+      
+      if (!amount || !currency) {
+        return res.status(400).json({ error: "Amount and currency are required" });
+      }
+
+      // For development, simulate successful order creation
+      // In production, this would use PayPal SDK
+      const mockOrder = {
+        id: `ORDER_${Date.now()}`,
+        status: "CREATED",
+        amount: amount,
+        currency: currency,
+        intent: intent
+      };
+      
+      res.json(mockOrder);
+    } catch (error) {
+      console.error("PayPal order creation error:", error);
+      res.status(500).json({ error: "Failed to create PayPal order" });
+    }
+  });
+
+  app.post("/api/paypal/order/:orderID/capture", requireAuth, async (req, res) => {
+    try {
+      const { orderID } = req.params;
+      const userId = (req as any).session.userId;
+      
+      // For development, simulate successful capture and upgrade user
+      // In production, this would capture the PayPal payment
+      const { updateUserPremiumStatus } = await import("./auth");
+      await updateUserPremiumStatus(userId, true);
+      
+      res.json({
+        id: orderID,
+        status: "COMPLETED",
+        purchaseUnits: [{
+          amount: { value: "4.99", currency_code: "USD" }
+        }]
+      });
+    } catch (error) {
+      console.error("PayPal capture error:", error);
+      res.status(500).json({ error: "Failed to capture PayPal order" });
+    }
+  });
+
+  // Return the HTTP server without listening (index.ts handles the listening)
+  return createServer(app);
 }
