@@ -4,8 +4,14 @@
 
 PictoText is a professional web application for extracting and manipulating text from images using advanced OCR technology. The application uses advanced OCR technology with content-aware inpainting to cleanly remove text from backgrounds, then presents the text as editable DOM elements that can be moved, styled, and customized independently. It features line-based text detection, soft mask generation, and sophisticated inpainting algorithms for professional-quality results.
 
-## Recent Changes (August 16, 2025)
+## Recent Changes (August 17, 2025)
 
+✓ **Google OAuth Integration**: Implemented full Google OAuth authentication with passport.js
+✓ **Social Authentication UI**: Added professional Google sign-in button with clean separator styling
+✓ **OAuth User Management**: Extended user schema to support OAuth providers and IDs
+✓ **Simplified Auth Options**: Removed Facebook/Apple, focusing on email registration + Google OAuth
+✓ **Production-Ready OAuth**: Configured callback URLs for production domain deployment
+✓ **Session Management**: Integrated passport session handling with existing authentication system
 ✓ **Anonymous Usage Support**: Major architectural change - free tier no longer requires login
 ✓ **Session-Based Tracking**: Anonymous users can use 3 free extractions per day via session tracking
 ✓ **Smart Authentication Flow**: Only prompt for login when users exceed their daily limit
@@ -49,10 +55,12 @@ The backend follows an Express.js RESTful API architecture:
 - **Anonymous Tracking**: Session-based usage tracking for non-authenticated users using `anon_${sessionId}` prefix
 
 ### Authentication & Authorization
-The application now supports both authenticated and anonymous usage:
+The application supports multiple authentication methods:
 - **Anonymous Usage**: Free tier (3 images/day) requires no authentication, tracked by session ID
-- **User Management**: Basic user schema with username/password authentication for premium features
-- **Session Handling**: Express sessions with PostgreSQL backing store, also used for anonymous tracking
+- **Email Registration**: Traditional username/password authentication with bcrypt hashing
+- **Google OAuth**: One-click Google sign-in using passport-google-oauth20 strategy
+- **User Management**: Extended user schema supporting both local and OAuth accounts
+- **Session Handling**: Express sessions with passport.js integration for OAuth flows
 - **Smart Authentication**: Only prompts for login when anonymous users exceed daily limits
 - **Progressive Enhancement**: Seamless upgrade path from anonymous to authenticated premium user
 
