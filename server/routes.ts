@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { z } from "zod";
+import passport from "passport";
 import { createUser, authenticateUser, getUserById } from "./auth";
 import { 
   canProcessImage, 
@@ -13,6 +14,7 @@ import {
 } from "./usage-tracking";
 import { OCRService } from "./ocr-service";
 import { insertUserSchema, loginSchema } from "@shared/schema";
+import "./oauth-config"; // Initialize passport strategies
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -274,9 +276,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Google OAuth routes
-  app.get("/api/auth/google", (req, res) => {
-    res.status(501).json({ error: "Google OAuth not configured. Please contact support to set up social authentication." });
-  });
+  app.get("/api/auth/google", 
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get("/api/auth/google/callback", 
+    passport.authenticate('google', { failureRedirect: '/' }),
+    (req, res) => {
+      // Successful authentication
+      const user = req.user as any;
+      if (user) {
+        (req as any).session.userId = user.id;
+        res.redirect('/'); // Redirect to main app
+      } else {
+        res.redirect('/?error=auth_failed');
+      }
+    }
+  );
 
   // Return the HTTP server without listening (index.ts handles the listening)
   return createServer(app);

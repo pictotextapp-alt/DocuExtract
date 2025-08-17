@@ -39,7 +39,25 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    
+    // Handle password hashing if password is provided
+    let passwordHash: string | null = null;
+    if (insertUser.password) {
+      const bcrypt = await import("bcrypt");
+      passwordHash = await bcrypt.hash(insertUser.password, 12);
+    }
+    
+    const user: User = { 
+      id,
+      username: insertUser.username,
+      email: insertUser.email,
+      passwordHash,
+      oauthProvider: insertUser.oauthProvider || null,
+      oauthId: insertUser.oauthId || null,
+      isPremium: insertUser.isPremium || false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
     this.users.set(id, user);
     return user;
   }

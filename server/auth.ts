@@ -125,3 +125,8 @@ export async function updateUserPremiumStatus(userId: string, isPremium: boolean
     return MemoryStorage.updateUserPremiumStatus(userId, isPremium);
   }
 }
+
+export async function hashPassword(password: string): Promise<string> {
+  const bcrypt = await import("bcrypt");
+  return bcrypt.hash(password, 12);
+}

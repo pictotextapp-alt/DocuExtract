@@ -46,6 +46,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
+    "@types/passport-google-oauth20": "^2.0.16",
     "bcrypt": "^6.0.0",
     "canvas": "^3.1.2",
     "class-variance-authority": "^0.7.1",
