@@ -281,18 +281,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   app.get("/api/auth/google/callback", 
-    passport.authenticate('google', { failureRedirect: '/' }),
+    passport.authenticate('google', { 
+      failureRedirect: '/?error=auth_failed',
+      failureMessage: true 
+    }),
     (req, res) => {
       // Successful authentication
       const user = req.user as any;
       if (user) {
         (req as any).session.userId = user.id;
-        res.redirect('/'); // Redirect to main app
+        console.log('Google OAuth success for user:', user.email);
+        res.redirect('/?auth=success'); // Redirect to main app with success indicator
       } else {
+        console.log('Google OAuth failed: no user returned');
         res.redirect('/?error=auth_failed');
       }
     }
   );
+
+  // Add logout route
+  app.post("/api/logout", (req, res) => {
+    (req as any).session.destroy();
+    res.json({ success: true });
+  });
 
   // Return the HTTP server without listening (index.ts handles the listening)
   return createServer(app);

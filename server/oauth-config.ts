@@ -4,10 +4,18 @@ import { storage } from './storage';
 
 // Configure Google OAuth
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Get the correct callback URL based on environment
+  const replotDomain = process.env.REPLIT_DOMAINS?.split(',')[0];
+  const callbackURL = replotDomain 
+    ? `https://${replotDomain}/api/auth/google/callback`
+    : "http://localhost:5000/api/auth/google/callback";
+
+  console.log('OAuth callback URL:', callbackURL);
+
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/api/auth/google/callback"
+    callbackURL: callbackURL
   },
   async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
