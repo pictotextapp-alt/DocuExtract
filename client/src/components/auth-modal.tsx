@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { FaGoogle, FaApple, FaFacebook } from "react-icons/fa";
+import { FaGoogle } from "react-icons/fa";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -176,28 +176,6 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
       >
         <FaGoogle className="w-4 h-4 text-red-500" />
         Continue with Google
-      </Button>
-      
-      <Button
-        onClick={() => handleSocialAuth("facebook")}
-        variant="outline"
-        className="w-full flex items-center justify-center gap-2 py-3"
-        disabled={isLoading}
-        data-testid="button-facebook-auth"
-      >
-        <FaFacebook className="w-4 h-4 text-blue-600" />
-        Continue with Facebook
-      </Button>
-      
-      <Button
-        onClick={() => handleSocialAuth("apple")}
-        variant="outline"
-        className="w-full flex items-center justify-center gap-2 py-3"
-        disabled={isLoading}
-        data-testid="button-apple-auth"
-      >
-        <FaApple className="w-4 h-4 text-gray-800 dark:text-gray-200" />
-        Continue with Apple
       </Button>
     </div>
   );

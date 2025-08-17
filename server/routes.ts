@@ -273,17 +273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Social OAuth routes (simplified for demo - placeholders)
+  // Google OAuth routes
   app.get("/api/auth/google", (req, res) => {
     res.status(501).json({ error: "Google OAuth not configured. Please contact support to set up social authentication." });
-  });
-
-  app.get("/api/auth/facebook", (req, res) => {
-    res.status(501).json({ error: "Facebook OAuth not configured. Please contact support to set up social authentication." });
-  });
-
-  app.get("/api/auth/apple", (req, res) => {
-    res.status(501).json({ error: "Apple OAuth not configured. Please contact support to set up social authentication." });
   });
 
   // Return the HTTP server without listening (index.ts handles the listening)
