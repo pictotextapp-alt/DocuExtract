@@ -387,6 +387,22 @@ export default function SimpleTextExtractor() {
             )}
           </div>
 
+          {/* Upload Another Button - Only shown when results exist */}
+          {result && (
+            <div className="flex justify-center">
+              <Button 
+                onClick={resetForm} 
+                variant="outline" 
+                size="lg"
+                className="bg-primary/5 hover:bg-primary/10 border-primary/20"
+                data-testid="button-upload-another"
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                Upload Another Image
+              </Button>
+            </div>
+          )}
+
           {/* Settings */}
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <div className="space-y-1">
@@ -493,14 +509,7 @@ export default function SimpleTextExtractor() {
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </Button>
-                      <Button onClick={resetForm} variant="outline" data-testid="button-reset">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Another
-                      </Button>
-                      <Button onClick={resetForm} variant="outline" data-testid="button-reset">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Another
-                      </Button>
+
                     </div>
                   </div>
                 </div>
