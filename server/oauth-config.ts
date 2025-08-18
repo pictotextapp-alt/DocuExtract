@@ -60,13 +60,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Passport session serialization
 passport.serializeUser((user: any, done) => {
-  done(null, user.id);
+  // Handle special case for users who need payment
+  if (user.needsPayment) {
+    done(null, { needsPayment: true, email: user.email });
+  } else {
+    done(null, user.id);
+  }
 });
 
-passport.deserializeUser(async (id: string, done) => {
+passport.deserializeUser(async (data: any, done) => {
   try {
-    const user = await storage.getUser(id);
-    done(null, user);
+    // Handle special case for users who need payment
+    if (typeof data === 'object' && data.needsPayment) {
+      done(null, data);
+    } else {
+      // Normal user lookup
+      const user = await storage.getUser(data);
+      done(null, user);
+    }
   } catch (error) {
     done(error, null);
   }
