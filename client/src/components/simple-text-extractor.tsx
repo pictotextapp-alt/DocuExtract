@@ -570,10 +570,9 @@ export default function SimpleTextExtractor() {
           setOauthEmail(null);
         }}
         onPaymentSuccess={(email) => {
-          // After payment, show auth modal for account creation
+          // Payment modal handles the redirect automatically
           setShowPaymentModal(false);
           setOauthEmail(null);
-          setShowAuthModal(true);
         }}
         initialEmail={oauthEmail || undefined}
       />

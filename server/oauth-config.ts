@@ -74,12 +74,13 @@ passport.deserializeUser(async (data: any, done) => {
     if (typeof data === 'object' && data.needsPayment) {
       done(null, data);
     } else {
-      // Normal user lookup
-      const user = await storage.getUser(data);
+      // Normal user lookup - use premium service for authenticated users
+      const user = await premiumService.getUserById(data);
       done(null, user);
     }
   } catch (error) {
-    done(error, null);
+    console.error('Deserialization error:', error);
+    done(null, null); // Return null instead of error to prevent crashes
   }
 });
 

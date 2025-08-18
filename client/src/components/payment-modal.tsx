@@ -59,14 +59,20 @@ export function PaymentModal({ isOpen, onClose, onPaymentSuccess, initialEmail }
         throw new Error(result.error || "Payment failed");
       }
 
+      // Show thank you message and redirect to OAuth sign in
       toast({
         title: "Payment Successful!",
-        description: "You can now create your premium account and start extracting text from images.",
+        description: "Thank you! Redirecting you to complete your account setup...",
         variant: "default"
       });
 
-      onPaymentSuccess(email);
+      // Close modal first
       onClose();
+      
+      // Redirect to Google OAuth to complete account creation
+      setTimeout(() => {
+        window.location.href = "/api/auth/google";
+      }, 1500);
     } catch (error: any) {
       console.error("Payment error:", error);
       toast({
