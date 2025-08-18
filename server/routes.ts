@@ -155,7 +155,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           username: user.username,
           email: user.email,
-          monthlyUsageCount: user.monthlyUsageCount
+          monthlyUsageCount: user.monthlyUsageCount,
+          isPremium: true // All users who can access this endpoint are premium
         }
       });
     } catch (error) {

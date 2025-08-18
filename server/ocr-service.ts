@@ -52,6 +52,7 @@ export class OCRService {
           "apikey": this.apiKey,
         },
         body: formData,
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       });
 
       if (!response.ok) {
