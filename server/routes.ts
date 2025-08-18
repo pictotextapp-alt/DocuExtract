@@ -54,11 +54,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add user to premium list after payment
       await premiumService.addPremiumUser(paymentData.email, mockPaypalOrderId);
       
-      res.json({
-        success: true,
-        message: "Payment successful! You can now create your account.",
-        paypalOrderId: mockPaypalOrderId
-      });
+      // Check if there's pending registration data for this email
+      const pendingRegistration = (req as any).session.pendingRegistration;
+      if (pendingRegistration && pendingRegistration.email === paymentData.email) {
+        // Create the user account immediately after successful payment
+        try {
+          const user = await premiumService.createUser({
+            username: pendingRegistration.username,
+            email: pendingRegistration.email,
+            password: pendingRegistration.password,
+            isPremium: true
+          });
+          
+          // Clear pending registration data
+          delete (req as any).session.pendingRegistration;
+          
+          console.log(`User account created after payment: ${user.email}`);
+          
+          res.json({
+            success: true,
+            message: "Payment successful and account created! You can now sign in.",
+            paypalOrderId: mockPaypalOrderId,
+            accountCreated: true
+          });
+        } catch (userCreationError: any) {
+          console.error("User creation error after payment:", userCreationError);
+          // Payment succeeded but user creation failed
+          res.json({
+            success: true,
+            message: "Payment successful! Please try registering again.",
+            paypalOrderId: mockPaypalOrderId,
+            accountCreated: false,
+            error: userCreationError.message
+          });
+        }
+      } else {
+        res.json({
+          success: true,
+          message: "Payment successful! You can now create your account.",
+          paypalOrderId: mockPaypalOrderId
+        });
+      }
     } catch (error: any) {
       console.error("PayPal payment error:", error);
       res.status(400).json({ 
@@ -75,6 +111,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if email is in premium users list
       const isPremium = await premiumService.isPremiumUser(userData.email);
       if (!isPremium) {
+        // Store pending registration data in session for after payment
+        (req as any).session.pendingRegistration = {
+          username: userData.username,
+          email: userData.email,
+          password: userData.password
+        };
+        
         return res.status(402).json({ 
           error: "Payment required to create premium account.",
           requiresPayment: true,
