@@ -390,21 +390,21 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
         }}
         initialEmail={paymentEmail || undefined}
         onPaymentSuccess={(email) => {
-          // Close payment modal
+          // Close payment modal and immediately show login
           setShowPaymentModal(false);
           setPaymentEmail(null);
           
-          // Switch to login tab and show success message
+          // Switch to login tab
           setActiveTab("login");
           
-          // Small delay to ensure payment modal closes first
-          setTimeout(() => {
-            toast({
-              title: "Registration Successful!",
-              description: "Your premium account is ready. Please sign in with your credentials below.",
-              variant: "default"
-            });
-          }, 300);
+          // Show success message
+          toast({
+            title: "Registration Successful!",
+            description: "Your premium account is ready. Please sign in with your credentials below.",
+            variant: "default"
+          });
+          
+          // Keep the auth modal open on login tab - no need to close it
         }}
       />
     </>
