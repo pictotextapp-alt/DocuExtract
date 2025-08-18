@@ -60,11 +60,20 @@ export class PremiumService {
       throw new Error("Only premium subscribers can create accounts. Please purchase premium first.");
     }
 
+    // Hash password if provided
+    let passwordHash: string | null = null;
+    if (userData.password) {
+      const bcrypt = await import("bcrypt");
+      passwordHash = await bcrypt.hash(userData.password, 12);
+    } else if (userData.passwordHash) {
+      passwordHash = userData.passwordHash;
+    }
+
     const user: User & { monthlyUsageCount: number } = {
       id: randomUUID(),
       username: userData.username,
       email: userData.email,
-      passwordHash: userData.passwordHash || null,
+      passwordHash,
       oauthProvider: userData.oauthProvider || null,
       oauthId: userData.oauthId || null,
       monthlyUsageCount: 0,
