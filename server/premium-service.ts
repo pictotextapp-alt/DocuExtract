@@ -53,7 +53,7 @@ export class PremiumService {
   /**
    * Create actual user account (only after premium verification)
    */
-  async createUser(userData: NewUser & { passwordHash?: string }): Promise<User> {
+  async createUser(userData: any): Promise<User> {
     // Check if email is premium first
     const isPremium = await this.isPremiumUser(userData.email);
     if (!isPremium) {
@@ -89,7 +89,7 @@ export class PremiumService {
   /**
    * Get user by ID
    */
-  async getUserById(id: string): Promise<User | undefined> {
+  async getUserById(id: string): Promise<any> {
     return this.users.get(id);
   }
 

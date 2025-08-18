@@ -62,8 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const user = await premiumService.createUser({
             username: pendingRegistration.username,
             email: pendingRegistration.email,
-            password: pendingRegistration.password,
-            isPremium: true
+            password: pendingRegistration.password
           });
           
           // Clear pending registration data
@@ -194,13 +193,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user - ONLY for premium authenticated users
   app.get("/api/user", requirePremiumAuth, async (req, res) => {
     try {
-      const user = req.user; // Set by requirePremiumAuth middleware
+      const user = req.user as any; // Set by requirePremiumAuth middleware
       res.json({ 
         user: {
           id: user.id,
           username: user.username,
           email: user.email,
-          monthlyUsageCount: user.monthlyUsageCount,
+          monthlyUsageCount: user.monthlyUsageCount || 0,
           isPremium: true // All users who can access this endpoint are premium
         }
       });

@@ -54,7 +54,8 @@ export class MemStorage implements IStorage {
       passwordHash,
       oauthProvider: insertUser.oauthProvider || null,
       oauthId: insertUser.oauthId || null,
-      isPremium: insertUser.isPremium || false,
+      monthlyUsageCount: 0,
+      lastUsageReset: new Date(),
       createdAt: new Date(),
       updatedAt: new Date()
     };
