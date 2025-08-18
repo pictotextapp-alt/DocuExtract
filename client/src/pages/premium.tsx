@@ -24,10 +24,10 @@ export default function Premium() {
     },
     {
       icon: <Archive className="h-6 w-6 text-blue-500" />,
-      title: "1GB Storage History",
-      description: "Keep your extraction history and original images safely stored",
-      free: "No storage",
-      premium: "1GB included"
+      title: "Multi-language Support",
+      description: "Extract text from images in 100+ languages with advanced recognition",
+      free: "English only",
+      premium: "100+ languages"
     },
     {
       icon: <Zap className="h-6 w-6 text-yellow-500" />,
