@@ -217,13 +217,28 @@ export default function SimpleTextExtractor() {
     });
   };
 
+  const resetForm = () => {
+    setFile(null);
+    setImagePreview(null);
+    setExtractedText("");
+    setResult(null);
+    
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    
+    toast({
+      title: "Form Reset",
+      description: "Ready for your next image extraction",
+    });
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
-      setFile(null);
-      setImagePreview(null);
-      setExtractedText("");
-      setResult(null);
+      resetForm(); // Use the resetForm function
       toast({
         title: "Logged out",
         description: "Successfully logged out",
@@ -477,6 +492,14 @@ export default function SimpleTextExtractor() {
                       <Button onClick={downloadText} variant="outline" data-testid="button-download">
                         <Download className="mr-2 h-4 w-4" />
                         Download
+                      </Button>
+                      <Button onClick={resetForm} variant="outline" data-testid="button-reset">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Another
+                      </Button>
+                      <Button onClick={resetForm} variant="outline" data-testid="button-reset">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Another
                       </Button>
                     </div>
                   </div>
