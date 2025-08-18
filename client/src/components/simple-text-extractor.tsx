@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth, useUsage } from "@/hooks/useAuth";
 import { AuthModal } from "./auth-modal";
+import { PaymentModal } from "./payment-modal";
 import { PremiumUpgradeModal } from "./premium-upgrade-modal";
 import { 
   Upload, 
@@ -38,6 +39,7 @@ export default function SimpleTextExtractor() {
 
   // Modal states
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   // UI states
@@ -138,7 +140,12 @@ export default function SimpleTextExtractor() {
         const errorData = await response.json();
         
         if (response.status === 429 && errorData.limitExceeded) {
-          // Check if authentication is required for anonymous users
+          // Check if payment is required for free users
+          if (errorData.requiresPayment) {
+            setShowPaymentModal(true);
+            return;
+          }
+          // Check if authentication is required
           if (errorData.requiresAuth && !isAuthenticated) {
             setShowAuthModal(true);
             return;
@@ -304,7 +311,19 @@ export default function SimpleTextExtractor() {
             Extract Text from Images
           </CardTitle>
           <CardDescription>
-            Upload an image and extract editable text using advanced OCR technology
+            Upload an image and extract editable text using advanced OCR technology.
+            {!isAuthenticated && usage && (
+              <span className="block mt-1 text-muted-foreground">
+                Free users get {usage.dailyLimit} extractions daily. 
+                <Button 
+                  variant="link" 
+                  className="h-auto p-0 ml-1 text-primary hover:underline"
+                  onClick={() => setShowPaymentModal(true)}
+                >
+                  Upgrade for unlimited access
+                </Button>
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
 
@@ -490,6 +509,16 @@ export default function SimpleTextExtractor() {
       </Card>
 
       {/* Modals */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={(email) => {
+          // After payment, show auth modal for account creation
+          setShowPaymentModal(false);
+          setShowAuthModal(true);
+        }}
+      />
+      
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 

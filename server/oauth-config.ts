@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { storage } from './storage';
+import { premiumService } from './premium-service';
 
 // Configure Google OAuth
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -25,20 +25,25 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         return done(new Error('No email provided by Google'), null);
       }
       
-      const existingUser = await storage.getUserByEmail(email);
+      // Check if email is in premium users list first
+      const isPremium = await premiumService.isPremiumUser(email);
+      if (!isPremium) {
+        return done(new Error('Only premium subscribers can log in. Please purchase premium first.'), null);
+      }
+      
+      const existingUser = await premiumService.getUserByEmail(email);
       
       if (existingUser) {
         // User exists, log them in
         return done(null, existingUser);
       }
       
-      // Create new user with OAuth data
-      const newUser = await storage.createUser({
+      // Create new user with OAuth data (they're already premium verified)
+      const newUser = await premiumService.createUser({
         username: profile.displayName || email.split('@')[0] || `user_${profile.id}`,
         email: email,
         oauthProvider: 'google',
-        oauthId: profile.id,
-        isPremium: false
+        oauthId: profile.id
       });
       
       return done(null, newUser);

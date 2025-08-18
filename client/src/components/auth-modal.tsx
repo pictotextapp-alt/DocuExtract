@@ -200,7 +200,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
               <CardHeader>
                 <CardTitle className="text-lg">Login</CardTitle>
                 <CardDescription>
-                  Welcome back! Sign in to continue extracting text from images.
+                  Premium access only. Sign in with your premium account.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -271,7 +271,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
               <CardHeader>
                 <CardTitle className="text-lg">Create Account</CardTitle>
                 <CardDescription>
-                  Join PictoText to start extracting text from images. Get 3 free extractions daily!
+                  Create your premium account. Only premium subscribers can register.
                 </CardDescription>
               </CardHeader>
               <CardContent>

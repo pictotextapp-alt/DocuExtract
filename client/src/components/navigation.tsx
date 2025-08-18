@@ -160,7 +160,7 @@ const Navigation = () => {
                     data-testid="button-sign-in"
                   >
                     <User className="w-4 h-4 mr-2" />
-                    Sign In
+                    Premium Sign In
                   </Button>
                 )}
               </div>

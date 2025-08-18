@@ -3,17 +3,11 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { z } from "zod";
 import passport from "passport";
-import { createUser, authenticateUser, getUserById } from "./auth";
-import { 
-  canProcessImage, 
-  getDailyUsage, 
-  recordImageProcessing,
-  getAnonymousUsage,
-  canProcessImageAnonymous,
-  recordAnonymousImageProcessing
-} from "./usage-tracking";
+import { freeUsageService } from "./free-usage-service";
+import { premiumService } from "./premium-service";
+// Removed old usage tracking imports - now using new tier system
 import { OCRService } from "./ocr-service";
-import { insertUserSchema, loginSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, paypalPaymentSchema } from "@shared/schema";
 import "./oauth-config"; // Initialize passport strategies
 
 const upload = multer({ 
@@ -31,52 +25,101 @@ try {
   console.warn("OCR Service not initialized:", error);
 }
 
-// Authentication middleware
-function requireAuth(req: any, res: any, next: any) {
+// Premium authentication middleware - only premium users can log in
+async function requirePremiumAuth(req: any, res: any, next: any) {
   if (!req.session?.userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  
+  const user = await premiumService.getUserById(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
+  }
+  
+  req.user = user;
   next();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
-  app.post("/api/register", async (req, res) => {
+  // PayPal payment endpoint - MUST be called before registration
+  app.post("/api/payment/paypal", async (req, res) => {
     try {
-      const userData = insertUserSchema.parse(req.body);
-      const user = await createUser(userData);
+      const paymentData = paypalPaymentSchema.parse(req.body);
       
-      // Create session
-      (req as any).session.userId = user.id;
+      // TODO: Integrate with actual PayPal SDK
+      // For now, simulate successful payment
+      const mockPaypalOrderId = `PAYPAL_${Date.now()}`;
       
-      res.json({ 
-        success: true, 
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isPremium: user.isPremium,
-        }
+      // Add user to premium list after payment
+      await premiumService.addPremiumUser(paymentData.email, mockPaypalOrderId);
+      
+      res.json({
+        success: true,
+        message: "Payment successful! You can now create your account.",
+        paypalOrderId: mockPaypalOrderId
       });
-    } catch (error) {
-      console.error("Registration error:", error);
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
-      }
-      
-      if (error instanceof Error) {
-        return res.status(400).json({ error: error.message });
-      }
-      
-      res.status(500).json({ error: "Registration failed" });
+    } catch (error: any) {
+      console.error("PayPal payment error:", error);
+      res.status(400).json({ 
+        error: error.message || "Payment processing failed" 
+      });
     }
   });
 
+  // Registration endpoint - ONLY for premium users who have already paid
+  app.post("/api/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if email is in premium users list
+      const isPremium = await premiumService.isPremiumUser(userData.email);
+      if (!isPremium) {
+        return res.status(403).json({ 
+          error: "Only premium subscribers can create accounts. Please purchase premium first." 
+        });
+      }
+      
+      // Hash password if provided
+      let passwordHash: string | undefined;
+      if (userData.password) {
+        const bcrypt = await import("bcrypt");
+        passwordHash = await bcrypt.hash(userData.password, 12);
+      }
+      
+      const user = await premiumService.createUser({
+        ...userData,
+        passwordHash
+      });
+      
+      // Automatically log in the user after registration
+      (req as any).session.userId = user.id;
+      
+      res.json({
+        message: "Premium account created successfully",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ 
+        error: error.message || "Failed to create account" 
+      });
+    }
+  });
+
+  // Login endpoint - ONLY for premium users
   app.post("/api/login", async (req, res) => {
     try {
       const credentials = loginSchema.parse(req.body);
-      const user = await authenticateUser(credentials);
+      const user = await premiumService.authenticateUser(credentials.username, credentials.password);
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
       
       // Create session
       (req as any).session.userId = user.id;
@@ -86,22 +129,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: {
           id: user.id,
           username: user.username,
-          email: user.email,
-          isPremium: user.isPremium,
+          email: user.email
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
-      }
-      
-      if (error instanceof Error) {
-        return res.status(400).json({ error: error.message });
-      }
-      
-      res.status(500).json({ error: "Login failed" });
+      res.status(400).json({ 
+        error: error.message || "Login failed" 
+      });
     }
   });
 
@@ -111,46 +146,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/user", requireAuth, async (req, res) => {
+  // Get current user - ONLY for premium authenticated users
+  app.get("/api/user", requirePremiumAuth, async (req, res) => {
     try {
-      const userId = (req as any).session.userId;
-      const user = await getUserById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      res.json({ user });
+      const user = req.user; // Set by requirePremiumAuth middleware
+      res.json({ 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          monthlyUsageCount: user.monthlyUsageCount
+        }
+      });
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user" });
     }
   });
 
-  // Anonymous usage endpoint
+  // Usage endpoint - supports both free (anonymous) and premium users
   app.get("/api/usage", async (req, res) => {
     try {
       const session = (req as any).session;
       
       if (session.userId) {
-        // Authenticated user
-        const usage = await getDailyUsage(session.userId);
-        res.json(usage);
+        // Premium authenticated user
+        const usage = await premiumService.getMonthlyUsage(session.userId);
+        res.json({
+          imageCount: usage.count,
+          monthlyLimit: usage.limit,
+          canProcess: usage.canProcess,
+          userType: "premium"
+        });
       } else {
-        // Anonymous user - use session ID for tracking
-        if (!session.id) {
-          return res.status(400).json({ error: "Session not available" });
-        }
-        const usage = await getAnonymousUsage(session.id);
-        res.json(usage);
+        // Free anonymous user
+        const usage = freeUsageService.getCurrentUsage(req);
+        // Set cookie for tracking
+        freeUsageService.setCookieInResponse(res, usage.cookieId);
+        res.json({
+          imageCount: usage.usageCount,
+          dailyLimit: usage.dailyLimit,
+          canProcess: usage.canProcess,
+          userType: "free"
+        });
       }
     } catch (error) {
-      console.error("Usage check error:", error);
-      res.status(500).json({ error: "Failed to check usage" });
+      console.error("Usage tracking error:", error);
+      res.status(500).json({ error: "Failed to get usage data" });
     }
   });
 
-  // OCR Processing endpoint - now supports anonymous users
+  // OCR Processing endpoint - supports both free and premium users
   app.post("/api/extract-text", upload.single('image'), async (req, res) => {
     try {
       const session = (req as any).session;
@@ -167,38 +213,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      let usageCheck: any;
-      let isAuthenticated = !!session.userId;
+      let canProcess = false;
+      let isPremium = !!session.userId;
 
-      if (isAuthenticated) {
-        // Authenticated user
-        usageCheck = await canProcessImage(session.userId);
-      } else {
-        // Anonymous user - use session ID for tracking
-        if (!session.id) {
-          return res.status(400).json({ error: "Session not available" });
+      if (isPremium) {
+        // Premium authenticated user
+        const usage = await premiumService.getMonthlyUsage(session.userId);
+        canProcess = usage.canProcess;
+        
+        if (!canProcess) {
+          return res.status(429).json({ 
+            error: "Monthly limit of 1500 extractions exceeded",
+            limitExceeded: true,
+            userType: "premium"
+          });
         }
-        usageCheck = await canProcessImageAnonymous(session.id);
-      }
-
-      // Check usage limits
-      if (!usageCheck.canProcess) {
-        return res.status(429).json({ 
-          error: usageCheck.reason,
-          limitExceeded: true,
-          usage: usageCheck.usage,
-          requiresAuth: !isAuthenticated // Tell frontend to show auth modal
-        });
+      } else {
+        // Free anonymous user
+        const usage = freeUsageService.getCurrentUsage(req);
+        canProcess = usage.canProcess;
+        
+        if (!canProcess) {
+          return res.status(429).json({ 
+            error: "Daily limit of 3 free extractions exceeded. Purchase premium for unlimited access.",
+            limitExceeded: true,
+            userType: "free",
+            requiresPayment: true // Tell frontend to show payment options
+          });
+        }
       }
 
       // Process the image with OCR
       const result = await ocrService.extractTextFromImage(req.file.buffer, useFiltering);
       
       // Record the usage
-      if (isAuthenticated) {
-        await recordImageProcessing(session.userId, result.wordCount, result.confidence);
+      if (isPremium) {
+        await premiumService.incrementMonthlyUsage(session.userId);
       } else {
-        await recordAnonymousImageProcessing(session.id, result.wordCount, result.confidence);
+        const usage = freeUsageService.incrementUsage(req);
+        freeUsageService.setCookieInResponse(res, usage.cookieId);
       }
       
       res.json(result);
@@ -227,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/paypal/order", requireAuth, async (req, res) => {
+  app.post("/api/paypal/order", async (req, res) => {
     try {
       const { amount, currency, intent } = req.body;
       
@@ -252,15 +305,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/paypal/order/:orderID/capture", requireAuth, async (req, res) => {
+  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
     try {
       const { orderID } = req.params;
       const userId = (req as any).session.userId;
       
-      // For development, simulate successful capture and upgrade user
+      // For development, simulate successful capture
       // In production, this would capture the PayPal payment
-      const { updateUserPremiumStatus } = await import("./auth");
-      await updateUserPremiumStatus(userId, true);
+      // Note: Payment verification is handled in /api/payment/paypal endpoint
       
       res.json({
         id: orderID,
@@ -290,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       if (user) {
         (req as any).session.userId = user.id;
-        console.log('Google OAuth success for user:', user.email);
+        console.log('Google OAuth success for premium user:', user.email);
         res.redirect('/?auth=success'); // Redirect to main app with success indicator
       } else {
         console.log('Google OAuth failed: no user returned');
