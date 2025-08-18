@@ -236,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!canProcess) {
           return res.status(429).json({ 
-            error: "Daily limit of 3 free extractions exceeded. Purchase premium for unlimited access.",
+            error: "Daily limit of 3 free extractions exceeded. Purchase premium for 1500 monthly extractions.",
             limitExceeded: true,
             userType: "free",
             requiresPayment: true // Tell frontend to show payment options

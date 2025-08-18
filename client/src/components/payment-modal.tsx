@@ -94,7 +94,7 @@ export function PaymentModal({ isOpen, onClose, onPaymentSuccess, initialEmail }
             Upgrade to Premium
           </DialogTitle>
           <DialogDescription>
-            Get unlimited image text extractions and 1GB of storage for just $4.99/month
+            Get 1500 monthly image text extractions and 1GB of storage for just $4.99/month
           </DialogDescription>
         </DialogHeader>
         
@@ -121,7 +121,7 @@ export function PaymentModal({ isOpen, onClose, onPaymentSuccess, initialEmail }
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-600" />
-                <span className="text-sm">No daily limits</span>
+                <span className="text-sm">1500 extractions/month</span>
               </div>
             </div>
 

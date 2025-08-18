@@ -309,7 +309,7 @@ export default function SimpleTextExtractor() {
                     {usage && (
                       <p className="text-sm text-muted-foreground">
                         {user.isPremium 
-                          ? "Unlimited extractions" 
+                          ? `${usage.imageCount || 0}/1500 extractions this month` 
                           : `${usage.imageCount}/${usage.dailyLimit} images used today`
                         }
                       </p>

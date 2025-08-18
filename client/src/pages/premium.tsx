@@ -17,10 +17,10 @@ export default function Premium() {
   const features = [
     {
       icon: <Infinity className="h-6 w-6 text-green-500" />,
-      title: "Unlimited OCR Extractions",
-      description: "Process as many images as you need with no daily limits",
+      title: "Monthly OCR Extractions",
+      description: "1500 high-quality extractions per month with priority processing",
       free: "3 per day",
-      premium: "Unlimited"
+      premium: "1500/month"
     },
     {
       icon: <Archive className="h-6 w-6 text-blue-500" />,

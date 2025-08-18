@@ -22,6 +22,8 @@ PictoText is a professional web application for extracting and manipulating text
 ✓ **Enhanced OCR Processing**: OCR.space API integration with advanced image preprocessing and confidence scoring
 ✓ **Dual OCR System**: Implemented robust fallback system - OCR.space primary with local Tesseract.js backup for 100% reliability
 ✓ **Premium User Experience**: Fixed upgrade button visibility and ensured seamless authentication flow
+✓ **Accurate Tier Limits**: Updated all UI references from "unlimited" to precise "1500 extractions per month" for premium tier
+✓ **Monthly Usage Tracking**: Backend properly enforces 1500 monthly extraction limit for premium users with automatic reset
 ✓ **Professional UI**: Clean navigation with reduced menu items, modern typography and enterprise-grade appearance
 ✓ **Smart Image Compression**: Automatic compression for large files with quality optimization
 ✓ **Intelligent Filtering**: Context-aware text extraction that removes UI noise while preserving meaningful content

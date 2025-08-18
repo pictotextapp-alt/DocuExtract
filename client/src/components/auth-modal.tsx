@@ -364,7 +364,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
         
         <div className="text-center text-sm text-muted-foreground">
           <p>Free users get 3 image extractions per day.</p>
-          <p>Upgrade to Premium for unlimited usage at just $4.99/month!</p>
+          <p>Upgrade to Premium for 1500 monthly extractions at just $4.99/month!</p>
         </div>
       </DialogContent>
     </Dialog>
