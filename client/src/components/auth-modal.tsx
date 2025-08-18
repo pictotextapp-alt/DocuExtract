@@ -388,7 +388,16 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
           setShowPaymentModal(false);
           setPaymentEmail(null);
         }}
-        prefilledEmail={paymentEmail}
+        initialEmail={paymentEmail || undefined}
+        onPaymentSuccess={(email) => {
+          // After payment, redirect to complete account setup
+          toast({
+            title: "Payment Successful!",
+            description: "Redirecting to complete your account setup...",
+          });
+          setShowPaymentModal(false);
+          setPaymentEmail(null);
+        }}
       />
     </>
   );
