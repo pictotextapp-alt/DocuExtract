@@ -55,11 +55,8 @@ export default function Premium() {
             PictoText Premium
           </h1>
         </div>
-        <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-          Unlock unlimited OCR extractions and professional features for serious users
-        </p>
+        <p className="text-xl text-slate-600 max-w-2xl mx-auto">Unlock 1500 OCR extractions per month and professional features for serious users</p>
       </div>
-
       {/* Current Status */}
       {isAuthenticated && (
         <Card className="mb-8 max-w-2xl mx-auto">
@@ -98,7 +95,6 @@ export default function Premium() {
           </CardContent>
         </Card>
       )}
-
       {/* Pricing Card */}
       <div className="max-w-md mx-auto mb-12">
         <Card className="border-2 border-amber-200 shadow-lg">
@@ -168,7 +164,6 @@ export default function Premium() {
           </CardContent>
         </Card>
       </div>
-
       {/* Features Comparison */}
       <div className="mb-12">
         <h2 className="text-3xl font-bold text-center mb-8">Feature Comparison</h2>
@@ -198,7 +193,6 @@ export default function Premium() {
           ))}
         </div>
       </div>
-
       {/* FAQ Section */}
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
@@ -223,14 +217,12 @@ export default function Premium() {
           </div>
         </CardContent>
       </Card>
-
       {/* Premium Upgrade Modal */}
       <PremiumUpgradeModal
         isOpen={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
         currentUsage={usage}
       />
-
       {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
