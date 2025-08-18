@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +50,28 @@ export default function SimpleTextExtractor() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [useFiltering, setUseFiltering] = useState(true);
+
+  // Store email from OAuth redirect
+  const [oauthEmail, setOauthEmail] = useState<string | null>(null);
+
+  // Check URL parameters for OAuth payment redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'required') {
+      const email = urlParams.get('email');
+      if (email) {
+        setOauthEmail(decodeURIComponent(email));
+        setShowPaymentModal(true);
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        toast({
+          title: "Payment Required",
+          description: "Complete your premium subscription to access your account.",
+          variant: "default",
+        });
+      }
+    }
+  }, [toast]);
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     // Validate file type
@@ -543,12 +565,17 @@ export default function SimpleTextExtractor() {
       {/* Modals */}
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setOauthEmail(null);
+        }}
         onPaymentSuccess={(email) => {
           // After payment, show auth modal for account creation
           setShowPaymentModal(false);
+          setOauthEmail(null);
           setShowAuthModal(true);
         }}
+        initialEmail={oauthEmail || undefined}
       />
       
       <AuthModal 

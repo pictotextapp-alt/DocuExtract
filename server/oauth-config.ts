@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { premiumService } from './premium-service';
+import { storage } from './storage';
 
 // Configure Google OAuth
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -28,7 +29,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       // Check if email is in premium users list first
       const isPremium = await premiumService.isPremiumUser(email);
       if (!isPremium) {
-        return done(new Error('Only premium subscribers can log in. Please purchase premium first.'), null);
+        // Instead of error, redirect to payment with special flag
+        return done(null, { needsPayment: true, email: email, oauthData: profile });
       }
       
       const existingUser = await premiumService.getUserByEmail(email);

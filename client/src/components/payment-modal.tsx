@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,20 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPaymentSuccess: (email: string) => void;
+  initialEmail?: string;
 }
 
-export function PaymentModal({ isOpen, onClose, onPaymentSuccess }: PaymentModalProps) {
-  const [email, setEmail] = useState("");
+export function PaymentModal({ isOpen, onClose, onPaymentSuccess, initialEmail }: PaymentModalProps) {
+  const [email, setEmail] = useState(initialEmail || "");
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+
+  // Update email when initialEmail prop changes
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   const handlePayPalPayment = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -338,9 +338,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       failureMessage: true 
     }),
     (req, res) => {
-      // Successful authentication
+      // Check if user needs payment first
       const user = req.user as any;
-      if (user) {
+      if (user && user.needsPayment) {
+        // Store OAuth data in session temporarily and redirect to payment flow
+        (req as any).session.pendingOAuth = {
+          email: user.email,
+          oauthData: user.oauthData
+        };
+        console.log('Google OAuth requires payment for:', user.email);
+        res.redirect('/?payment=required&email=' + encodeURIComponent(user.email));
+        return;
+      }
+      
+      // Successful authentication for premium user
+      if (user && user.id) {
         (req as any).session.userId = user.id;
         console.log('Google OAuth success for premium user:', user.email);
         res.redirect('/?auth=success'); // Redirect to main app with success indicator
