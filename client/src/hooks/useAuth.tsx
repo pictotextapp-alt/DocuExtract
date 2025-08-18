@@ -86,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const error = await response.json();
+        // For payment required (402), include the email for redirect
+        if (response.status === 402 && error.requiresPayment) {
+          const paymentError = new Error(error.error || "Payment required");
+          (paymentError as any).requiresPayment = true;
+          (paymentError as any).email = error.email;
+          throw paymentError;
+        }
         throw new Error(error.error || "Registration failed");
       }
 

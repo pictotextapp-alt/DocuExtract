@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { PaymentModal } from "./payment-modal";
 import { Loader2 } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 
@@ -24,6 +25,8 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(mode || defaultTab);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentEmail, setPaymentEmail] = useState<string | null>(null);
 
   // Update activeTab when mode prop changes
   useEffect(() => {
@@ -139,6 +142,14 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
       // Reset form
       setRegisterForm({ username: "", email: "", password: "", confirmPassword: "" });
     } catch (error) {
+      // Check if it's a payment requirement error
+      if (error instanceof Error && (error as any).requiresPayment) {
+        setPaymentEmail((error as any).email);
+        setShowPaymentModal(true);
+        onClose(); // Close auth modal
+        return;
+      }
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Registration failed",
@@ -181,8 +192,9 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold">
             Welcome to PictoText
@@ -366,7 +378,18 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, defaultTab = "l
           <p>Free users get 3 image extractions per day.</p>
           <p>Upgrade to Premium for 1500 monthly extractions at just $4.99/month!</p>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Payment Modal for registration payment requirement */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentEmail(null);
+        }}
+        prefilledEmail={paymentEmail}
+      />
+    </>
   );
 }

@@ -75,8 +75,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if email is in premium users list
       const isPremium = await premiumService.isPremiumUser(userData.email);
       if (!isPremium) {
-        return res.status(403).json({ 
-          error: "Only premium subscribers can create accounts. Please purchase premium first." 
+        return res.status(402).json({ 
+          error: "Payment required to create premium account.",
+          requiresPayment: true,
+          email: userData.email
         });
       }
       
