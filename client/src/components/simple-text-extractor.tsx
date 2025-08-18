@@ -339,7 +339,6 @@ export default function SimpleTextExtractor() {
           </CardContent>
         </Card>
       )}
-
       {/* Main Extractor */}
       <Card className="w-full">
         <CardHeader className="text-center">
@@ -356,9 +355,7 @@ export default function SimpleTextExtractor() {
                   variant="link" 
                   className="h-auto p-0 ml-1 text-primary hover:underline"
                   onClick={() => setShowPaymentModal(true)}
-                >
-                  Upgrade for unlimited access
-                </Button>
+                >Upgrade for upto 1500 extractions per month</Button>
               </span>
             )}
           </CardDescription>
@@ -561,7 +558,6 @@ export default function SimpleTextExtractor() {
           )}
         </CardContent>
       </Card>
-
       {/* Modals */}
       <PaymentModal
         isOpen={showPaymentModal}
@@ -576,12 +572,10 @@ export default function SimpleTextExtractor() {
         }}
         initialEmail={oauthEmail || undefined}
       />
-      
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
       />
-      
       <PremiumUpgradeModal 
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)}
