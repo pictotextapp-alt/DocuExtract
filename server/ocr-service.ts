@@ -21,74 +21,127 @@ export class OCRService {
     useFiltering = false
   ): Promise<OCRResult> {
     try {
-      // Compress image if it's too large (OCR.space has 1MB limit)
-      let processedBuffer = imageBuffer;
-      const maxSize = 1024 * 1024; // 1MB limit for OCR.space
-      
-      if (imageBuffer.length > maxSize) {
-        console.log(`Image size ${Math.round(imageBuffer.length / 1024)}KB exceeds limit, compressing...`);
-        processedBuffer = await this.compressImage(imageBuffer);
-        console.log(`Compressed to ${Math.round(processedBuffer.length / 1024)}KB`);
+      // Try OCR.space API first with a shorter timeout
+      try {
+        return await this.extractWithOCRSpace(imageBuffer, useFiltering);
+      } catch (error) {
+        console.log("OCR.space failed, falling back to local Tesseract:", error.message);
+        // Fallback to local Tesseract processing
+        return await this.extractWithTesseract(imageBuffer, useFiltering);
       }
-
-      // Convert buffer to base64
-      const base64Image = processedBuffer.toString('base64');
-      const mimeType = this.detectMimeType(processedBuffer);
-      const dataUrl = `data:${mimeType};base64,${base64Image}`;
-
-      // Prepare FormData for OCR.space API
-      const formData = new FormData();
-      formData.append("base64Image", dataUrl);
-      formData.append("language", "eng");
-      formData.append("OCREngine", "2"); // Engine 2 is more accurate
-      formData.append("detectOrientation", "true");
-      formData.append("scale", "true");
-      formData.append("isOverlayRequired", "false");
-      formData.append("isTable", "true"); // Better structure detection
-
-      const response = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        headers: {
-          "apikey": this.apiKey,
-        },
-        body: formData,
-        signal: AbortSignal.timeout(30000) // 30 second timeout
-      });
-
-      if (!response.ok) {
-        throw new Error(`OCR API request failed: ${response.statusText}`);
-      }
-
-      const ocrResult = await response.json();
-      
-      if (ocrResult.IsErroredOnProcessing) {
-        throw new Error(ocrResult.ErrorMessage || "OCR processing failed");
-      }
-
-      let extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
-      
-      // Calculate confidence
-      const confidence = this.calculateConfidence(extractedText, ocrResult);
-      
-      // Apply filtering if requested
-      let filteredText = extractedText;
-      if (useFiltering && extractedText) {
-        filteredText = this.filterOCRText(extractedText);
-      }
-
-      const finalText = filteredText || extractedText;
-      const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
-
-      return {
-        extractedText: finalText,
-        confidence,
-        wordCount,
-        rawText: extractedText !== finalText ? extractedText : undefined,
-      };
     } catch (error) {
-      console.error("OCR Service error:", error);
-      throw error;
+      console.error("All OCR methods failed:", error);
+      throw new Error("OCR processing failed. Please try again with a different image.");
     }
+  }
+
+  private async extractWithOCRSpace(
+    imageBuffer: Buffer, 
+    useFiltering = false
+  ): Promise<OCRResult> {
+    // Compress image if it's too large (OCR.space has 1MB limit)
+    let processedBuffer = imageBuffer;
+    const maxSize = 1024 * 1024; // 1MB limit for OCR.space
+    
+    if (imageBuffer.length > maxSize) {
+      console.log(`Image size ${Math.round(imageBuffer.length / 1024)}KB exceeds limit, compressing...`);
+      processedBuffer = await this.compressImage(imageBuffer);
+      console.log(`Compressed to ${Math.round(processedBuffer.length / 1024)}KB`);
+    }
+
+    // Convert buffer to base64
+    const base64Image = processedBuffer.toString('base64');
+    const mimeType = this.detectMimeType(processedBuffer);
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+
+    // Prepare FormData for OCR.space API
+    const formData = new FormData();
+    formData.append("base64Image", dataUrl);
+    formData.append("language", "eng");
+    formData.append("OCREngine", "2");
+    formData.append("detectOrientation", "true");
+    formData.append("scale", "true");
+    formData.append("isOverlayRequired", "false");
+    formData.append("isTable", "true");
+
+    const response = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: {
+        "apikey": this.apiKey,
+      },
+      body: formData,
+      signal: AbortSignal.timeout(15000) // Reduced to 15 seconds
+    });
+
+    if (!response.ok) {
+      throw new Error(`OCR API request failed: ${response.statusText}`);
+    }
+
+    const ocrResult = await response.json();
+    
+    if (ocrResult.IsErroredOnProcessing) {
+      throw new Error(ocrResult.ErrorMessage || "OCR processing failed");
+    }
+
+    let extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || "";
+    
+    // Calculate confidence
+    const confidence = this.calculateConfidence(extractedText, ocrResult);
+    
+    // Apply filtering if requested
+    let filteredText = extractedText;
+    if (useFiltering && extractedText) {
+      filteredText = this.filterOCRText(extractedText);
+    }
+
+    const finalText = filteredText || extractedText;
+    const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
+
+    return {
+      extractedText: finalText,
+      confidence,
+      wordCount,
+      rawText: extractedText !== finalText ? extractedText : undefined,
+    };
+  }
+
+  private async extractWithTesseract(
+    imageBuffer: Buffer, 
+    useFiltering = false
+  ): Promise<OCRResult> {
+    const Tesseract = require('tesseract.js');
+    
+    console.log("Using local Tesseract OCR as fallback...");
+    
+    const { data: { text, confidence } } = await Tesseract.recognize(
+      imageBuffer,
+      'eng',
+      {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            console.log(`Tesseract progress: ${Math.round(m.progress * 100)}%`);
+          }
+        }
+      }
+    );
+
+    let extractedText = text || "";
+    
+    // Apply filtering if requested
+    let filteredText = extractedText;
+    if (useFiltering && extractedText) {
+      filteredText = this.filterOCRText(extractedText);
+    }
+
+    const finalText = filteredText || extractedText;
+    const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
+
+    return {
+      extractedText: finalText,
+      confidence: confidence || 85, // Tesseract typically provides good confidence
+      wordCount,
+      rawText: extractedText !== finalText ? extractedText : undefined,
+    };
   }
 
   private detectMimeType(buffer: Buffer): string {
