@@ -1,9 +1,11 @@
 import SimpleTextExtractor from "@/components/simple-text-extractor";
+import Footer from "@/components/footer";
 
 const Home = () => {
   return (
     <div className="animate-fade-in">
-      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Hero Section */}
       <div className="text-center mb-12">
         <div className="flex items-center justify-center mb-8">
           <svg width="100" height="100" viewBox="0 0 80 80" className="mr-6">
@@ -143,6 +145,10 @@ const Home = () => {
           </div>
         </div>
       </div>
+      </main>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

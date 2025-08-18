@@ -8,6 +8,9 @@ import Navigation from "@/components/navigation";
 import Home from "@/pages/home";
 import Settings from "@/pages/settings";
 import Premium from "@/pages/premium";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import RefundPolicy from "@/pages/refund-policy";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +18,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/premium" component={Premium} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/refund-policy" component={RefundPolicy} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -27,9 +33,7 @@ function App() {
         <TooltipProvider>
           <div className="min-h-screen bg-slate-50">
             <Navigation />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <Router />
-            </main>
+            <Router />
           </div>
           <Toaster />
         </TooltipProvider>
