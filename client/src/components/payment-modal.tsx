@@ -59,20 +59,15 @@ export function PaymentModal({ isOpen, onClose, onPaymentSuccess, initialEmail }
         throw new Error(result.error || "Payment failed");
       }
 
-      // Show thank you message and redirect to OAuth sign in
+      // Call the success callback with email to notify parent
+      onPaymentSuccess(email);
+      
+      // Show success message
       toast({
         title: "Payment Successful!",
-        description: "Thank you! Redirecting you to complete your account setup...",
+        description: "Your premium account is ready! You can now sign in with your credentials.",
         variant: "default"
       });
-
-      // Close modal first
-      onClose();
-      
-      // Redirect to Google OAuth to complete account creation
-      setTimeout(() => {
-        window.location.href = "/api/auth/google";
-      }, 1500);
     } catch (error: any) {
       console.error("Payment error:", error);
       toast({
