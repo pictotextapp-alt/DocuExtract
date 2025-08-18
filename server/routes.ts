@@ -9,6 +9,7 @@ import { premiumService } from "./premium-service";
 import { OCRService } from "./ocr-service";
 import { insertUserSchema, loginSchema, paypalPaymentSchema } from "@shared/schema";
 import "./oauth-config"; // Initialize passport strategies
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -47,12 +48,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const paymentData = paypalPaymentSchema.parse(req.body);
       
-      // TODO: Integrate with actual PayPal SDK
-      // For now, simulate successful payment
-      const mockPaypalOrderId = `PAYPAL_${Date.now()}`;
+      // For development: simulate successful payment
+      // In production: would verify actual PayPal payment webhook/transaction
+      const paypalOrderId = `PAYPAL_${Date.now()}`;
       
       // Add user to premium list after payment
-      await premiumService.addPremiumUser(paymentData.email, mockPaypalOrderId);
+      await premiumService.addPremiumUser(paymentData.email, paypalOrderId);
       
       // Check if there's pending registration data for this email
       const pendingRegistration = (req as any).session.pendingRegistration;
@@ -313,63 +314,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // PayPal integration endpoints
   app.get("/api/paypal/setup", async (req, res) => {
-    try {
-      // For development, return mock client token
-      // In production, this would generate actual PayPal client token
-      res.json({
-        clientToken: "development-client-token",
-      });
-    } catch (error) {
-      console.error("PayPal setup error:", error);
-      res.status(500).json({ error: "Failed to setup PayPal" });
-    }
+    await loadPaypalDefault(req, res);
   });
 
   app.post("/api/paypal/order", async (req, res) => {
-    try {
-      const { amount, currency, intent } = req.body;
-      
-      if (!amount || !currency) {
-        return res.status(400).json({ error: "Amount and currency are required" });
-      }
-
-      // For development, simulate successful order creation
-      // In production, this would use PayPal SDK
-      const mockOrder = {
-        id: `ORDER_${Date.now()}`,
-        status: "CREATED",
-        amount: amount,
-        currency: currency,
-        intent: intent
-      };
-      
-      res.json(mockOrder);
-    } catch (error) {
-      console.error("PayPal order creation error:", error);
-      res.status(500).json({ error: "Failed to create PayPal order" });
-    }
+    // Request body should contain: { intent, amount, currency }
+    await createPaypalOrder(req, res);
   });
 
   app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
-    try {
-      const { orderID } = req.params;
-      const userId = (req as any).session.userId;
-      
-      // For development, simulate successful capture
-      // In production, this would capture the PayPal payment
-      // Note: Payment verification is handled in /api/payment/paypal endpoint
-      
-      res.json({
-        id: orderID,
-        status: "COMPLETED",
-        purchaseUnits: [{
-          amount: { value: "4.99", currency_code: "USD" }
-        }]
-      });
-    } catch (error) {
-      console.error("PayPal capture error:", error);
-      res.status(500).json({ error: "Failed to capture PayPal order" });
-    }
+    await capturePaypalOrder(req, res);
   });
 
   // Google OAuth routes
