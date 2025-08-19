@@ -25,7 +25,7 @@ export class OCRService {
       try {
         return await this.extractWithOCRSpace(imageBuffer, useFiltering);
       } catch (error) {
-        console.log("OCR.space failed, falling back to local Tesseract:", error.message);
+        console.log("OCR.space failed, falling back to local Tesseract:", (error as Error).message);
         // Fallback to local Tesseract processing
         return await this.extractWithTesseract(imageBuffer, useFiltering);
       }
@@ -70,7 +70,7 @@ export class OCRService {
         "apikey": this.apiKey,
       },
       body: formData,
-      signal: AbortSignal.timeout(15000) // Reduced to 15 seconds
+      signal: AbortSignal.timeout(30000) // 30 seconds timeout
     });
 
     if (!response.ok) {
@@ -109,39 +109,44 @@ export class OCRService {
     imageBuffer: Buffer, 
     useFiltering = false
   ): Promise<OCRResult> {
-    const Tesseract = require('tesseract.js');
-    
-    console.log("Using local Tesseract OCR as fallback...");
-    
-    const { data: { text, confidence } } = await Tesseract.recognize(
-      imageBuffer,
-      'eng',
-      {
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            console.log(`Tesseract progress: ${Math.round(m.progress * 100)}%`);
+    try {
+      const Tesseract = await import('tesseract.js');
+      
+      console.log("Using local Tesseract OCR as fallback...");
+      
+      const { data: { text, confidence } } = await Tesseract.default.recognize(
+        imageBuffer,
+        'eng',
+        {
+          logger: (m: any) => {
+            if (m.status === 'recognizing text') {
+              console.log(`Tesseract progress: ${Math.round(m.progress * 100)}%`);
+            }
           }
         }
-      }
-    );
+      );
 
     let extractedText = text || "";
     
-    // Apply filtering if requested
-    let filteredText = extractedText;
-    if (useFiltering && extractedText) {
-      filteredText = this.filterOCRText(extractedText);
+      // Apply filtering if requested
+      let filteredText = extractedText;
+      if (useFiltering && extractedText) {
+        filteredText = this.filterOCRText(extractedText);
+      }
+
+      const finalText = filteredText || extractedText;
+      const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
+
+      return {
+        extractedText: finalText,
+        confidence: confidence || 85, // Tesseract typically provides good confidence
+        wordCount,
+        rawText: extractedText !== finalText ? extractedText : undefined,
+      };
+    } catch (tesseractError) {
+      console.error("Tesseract OCR failed:", tesseractError);
+      throw new Error("Local OCR fallback failed. Please try a different image.");
     }
-
-    const finalText = filteredText || extractedText;
-    const wordCount = finalText.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
-
-    return {
-      extractedText: finalText,
-      confidence: confidence || 85, // Tesseract typically provides good confidence
-      wordCount,
-      rawText: extractedText !== finalText ? extractedText : undefined,
-    };
   }
 
   private detectMimeType(buffer: Buffer): string {
