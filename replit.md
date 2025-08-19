@@ -4,7 +4,16 @@
 
 PictoText is a professional web application for extracting and manipulating text from images using advanced OCR technology. The application uses advanced OCR technology with content-aware inpainting to cleanly remove text from backgrounds, then presents the text as editable DOM elements that can be moved, styled, and customized independently. It features line-based text detection, soft mask generation, and sophisticated inpainting algorithms for professional-quality results.
 
-## Recent Changes (August 17, 2025)
+## Recent Changes (August 19, 2025)
+
+✓ **Cloudflare Pages Structure**: Restructured project for Cloudflare Pages deployment
+✓ **Frontend Migration**: Moved React/Vite frontend code to `/src` directory  
+✓ **Backend Organization**: Maintained Express backend in `/server` directory
+✓ **Build Configuration**: Created `wrangler.toml` and custom build script for deployment
+✓ **Static Assets**: Set up `/public` folder for static assets and HTML entry point
+✓ **Production Ready**: Build outputs both frontend and backend to `/dist` for deployment
+
+## Previous Changes (August 17, 2025)
 
 ✓ **Google OAuth Integration**: Implemented full Google OAuth authentication with passport.js
 ✓ **Social Authentication UI**: Added professional Google sign-in button with clean separator styling
@@ -37,11 +46,13 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 The frontend is built as a React Single Page Application (SPA) using TypeScript and modern React patterns:
 - **Framework**: React 18 with TypeScript for type safety
+- **Project Structure**: Frontend code organized in `/src` directory for Cloudflare Pages compatibility
 - **Routing**: Wouter for lightweight client-side routing
 - **State Management**: TanStack Query for server state management and caching
 - **UI Components**: Radix UI primitives with shadcn/ui component system
 - **Styling**: Tailwind CSS with CSS custom properties for theming
 - **Build Tool**: Vite for fast development and optimized production builds
+- **Static Assets**: `/public` directory containing HTML entry point and static resources
 
 ### Backend Architecture
 The backend follows an Express.js RESTful API architecture:
@@ -85,6 +96,8 @@ The application supports multiple authentication methods:
 - **Code Quality**: TypeScript strict mode with comprehensive type checking
 - **Build Process**: ESBuild for server bundling, Vite for client bundling
 - **Path Aliases**: Configured for clean imports (@/, @shared/)
+- **Cloudflare Pages**: Structured for seamless deployment with `wrangler.toml` configuration
+- **Custom Build Script**: `build-cf.js` for optimized production builds targeting Cloudflare Pages
 
 ## External Dependencies
 
