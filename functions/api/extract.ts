@@ -1,26 +1,38 @@
 export const onRequestGet = async () => {
-  return new Response(JSON.stringify({ ok: true, message: "Use POST with multipart/form-data" }), {
-    headers: { "content-type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ ok: true, message: "Use POST with multipart/form-data" }),
+    {
+      headers: { "content-type": "application/json" },
+    },
+  );
 };
 
 export const onRequestPost = async ({ request, env }: any) => {
   try {
     const hasKey = Boolean(env.OCRSPACE_API_KEY);
     if (!hasKey) {
-      return new Response(JSON.stringify({ error: true, message: "OCRSPACE_API_KEY missing at runtime" }), {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: true,
+          message: "OCRSPACE_API_KEY missing at runtime",
+        }),
+        {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        },
+      );
     }
 
     const form = await request.formData();
     const file = form.get("file");
     if (!file || !(file instanceof Blob)) {
-      return new Response(JSON.stringify({ error: true, message: "No file provided" }), {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: true, message: "No file provided" }),
+        {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        },
+      );
     }
 
     const body = new FormData();
@@ -41,7 +53,9 @@ export const onRequestPost = async ({ request, env }: any) => {
     // Try to parse JSON, but still return JSON even if upstream gave HTML/text.
     let json: any = null;
     if (contentType.includes("application/json")) {
-      try { json = JSON.parse(raw); } catch {}
+      try {
+        json = JSON.parse(raw);
+      } catch {}
     }
 
     if (!r.ok) {
@@ -52,21 +66,24 @@ export const onRequestPost = async ({ request, env }: any) => {
           upstreamContentType: contentType,
           raw,
         }),
-        { status: 502, headers: { "content-type": "application/json" } }
+        { status: 502, headers: { "content-type": "application/json" } },
       );
     }
 
     if (json?.ParsedResults?.[0]?.ParsedText != null) {
       return new Response(
         JSON.stringify({ text: json.ParsedResults[0].ParsedText, raw: json }),
-        { headers: { "content-type": "application/json" } }
+        { headers: { "content-type": "application/json" } },
       );
     }
 
     // Fallback: return whatever upstream sent (wrapped in JSON)
-    return new Response(JSON.stringify({ raw, upstreamContentType: contentType }), {
-      headers: { "content-type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ raw, upstreamContentType: contentType }),
+      {
+        headers: { "content-type": "application/json" },
+      },
+    );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: true, message: String(e) }), {
       status: 500,
