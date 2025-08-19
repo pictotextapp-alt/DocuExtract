@@ -1,86 +1,136 @@
-# Cloudflare Pages Deployment Guide
+# Cloudflare Workers Deployment Guide
 
 ## Project Structure Overview
 
-Your project is now structured for Cloudflare Pages deployment:
+Your PictoText application is configured for Cloudflare Workers deployment as a full-stack Express.js application:
 
 ```
-├── src/                    # React frontend source (moved from client/src)
-├── server/                 # Express.js backend (unchanged)
-├── public/                 # Static assets and HTML entry point
+├── src/                    # React frontend source (production builds)
+├── client/src/             # React frontend source (development)
+├── server/                 # Express.js backend
+│   ├── index.ts           # Main server entry point
+│   ├── routes.ts          # API routes
+│   ├── paypal.ts          # PayPal integration
+│   └── ocr-service.ts     # OCR processing
 ├── shared/                 # Shared types and schemas
-├── dist/                   # Build output directory
-├── wrangler.toml           # Cloudflare Pages configuration
-├── build-cf.js             # Custom build script
-└── README.md               # Full documentation
+├── public/                 # Static assets
+├── wrangler.toml           # Cloudflare Workers configuration
+└── README.md               # Documentation
 ```
 
-## Quick Deploy Commands
+## Deployment Configuration
 
-### 1. Build for Production
+The `wrangler.toml` file is configured for Workers deployment:
+
+```toml
+name = "pictotext-backend"
+main = "server/index.ts"
+compatibility_date = "2023-01-01"
+node_compat = true
+```
+
+- **name**: Unique Worker name across Cloudflare
+- **main**: Entry point to your Express.js server
+- **node_compat**: Enables Node.js compatibility for Express, OCR libraries, etc.
+
+## Environment Variables Required
+
+Set these secrets in Cloudflare Workers:
+
 ```bash
-# Option A: Use the custom build script
-node build-cf.js
+# Database
+DATABASE_URL="your-postgresql-connection-string"
 
-# Option B: Use npm (if package.json is updated)
-npm run build
+# OAuth
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
 
-# Option C: Manual build
-vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+# PayPal
+PAYPAL_CLIENT_ID="your-paypal-client-id"
+PAYPAL_CLIENT_SECRET="your-paypal-client-secret"
+
+# OCR
+OCR_SPACE_API_KEY="your-ocr-space-api-key"
+
+# Session
+SESSION_SECRET="your-session-secret"
 ```
 
-### 2. Deploy to Cloudflare Pages
+## Deployment Steps
 
-#### Via GitHub (Recommended)
-1. Push code to GitHub repository
-2. Connect repo to Cloudflare Pages dashboard
-3. Set build settings:
-   - **Build command**: `npm run build` or `node build-cf.js`
-   - **Build output directory**: `dist`
-   - **Root directory**: (leave blank)
-
-#### Via Wrangler CLI
+### 1. Install Wrangler CLI
 ```bash
-# Deploy directly
-npx wrangler pages deploy dist --project-name docuextract
+npm install -g wrangler
 ```
 
-## Environment Variables
-
-Set these in Cloudflare Pages dashboard → Settings → Environment variables:
-
-```
-DATABASE_URL=your_postgresql_connection_string
-GOOGLE_CLIENT_ID=your_google_oauth_client_id  
-GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-OCR_SPACE_API_KEY=your_ocr_space_api_key
-SESSION_SECRET=your_session_secret
+### 2. Login to Cloudflare
+```bash
+wrangler login
 ```
 
-## Build Output
+### 3. Set Environment Variables
+```bash
+wrangler secret put DATABASE_URL
+wrangler secret put GOOGLE_CLIENT_ID
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put PAYPAL_CLIENT_ID
+wrangler secret put PAYPAL_CLIENT_SECRET
+wrangler secret put OCR_SPACE_API_KEY
+wrangler secret put SESSION_SECRET
+```
 
-After successful build:
-- Frontend: Static files in `dist/public/`
-- Backend: Bundled server in `dist/index.js`
-- Dependencies: Production `package.json` in `dist/`
+### 4. Deploy to Workers
+```bash
+wrangler deploy
+```
 
 ## Development vs Production
 
 ### Development (Replit)
+- Uses `/client/src` structure for compatibility with existing Vite setup
+- Express server runs normally with full Node.js environment
+- Hot reloading and development features enabled
+
+### Production (Cloudflare Workers)
+- Uses `/src` structure for optimized builds
+- Express server runs on Cloudflare Workers runtime
+- Automatic scaling and global edge deployment
+
+## Database Considerations
+
+For production deployment, ensure your PostgreSQL database:
+- Is accessible from Cloudflare Workers (publicly accessible or via Cloudflare Tunnel)
+- Has connection pooling configured for serverless workloads
+- Consider using services like:
+  - **Neon**: Serverless PostgreSQL with automatic scaling
+  - **Supabase**: PostgreSQL with built-in APIs
+  - **Cloudflare D1**: Serverless SQLite (requires schema migration)
+
+## Monitoring and Logs
+
+View logs and metrics:
 ```bash
-npm run dev  # Runs both Vite dev server and Express server
+# View recent logs
+wrangler tail
+
+# View Worker analytics
+wrangler analytics
 ```
 
-### Production (Cloudflare Pages)
-- Static frontend served by Cloudflare Pages
-- Backend functions handle server-side logic
-- Database connections via environment variables
+## Custom Domain (Optional)
 
-## Troubleshooting
+Add a custom domain:
+1. Go to Cloudflare Workers dashboard
+2. Navigate to your `pictotext-backend` worker
+3. Click "Triggers" tab
+4. Add custom domain and configure DNS
 
-- **Build fails**: Check that all dependencies are installed
-- **Environment variables**: Ensure all required secrets are set in Cloudflare
-- **Path issues**: Verify that asset paths are relative, not absolute
-- **Database connection**: Use connection pooling for serverless compatibility
+## Rollback
+
+If deployment fails, rollback to previous version:
+```bash
+wrangler rollback
+```
+
+Your PictoText application will be available at:
+`https://pictotext-backend.your-subdomain.workers.dev`

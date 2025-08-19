@@ -1,5 +1,4 @@
-name = "docuextract"
-compatibility_date = "2025-08-19"
-
-[site]
-bucket = "./dist"
+name = "pictotext-backend"
+main = "server/index.ts"
+compatibility_date = "2023-01-01"
+node_compat = true
