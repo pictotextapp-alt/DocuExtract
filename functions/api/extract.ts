@@ -1,7 +1,19 @@
-// /functions/api/extract.ts
+export const onRequestGet = async () => {
+  return new Response(JSON.stringify({ ok: true, message: "Use POST with multipart/form-data" }), {
+    headers: { "content-type": "application/json" },
+  });
+};
+
 export const onRequestPost = async ({ request, env }: any) => {
   try {
-    // Expect multipart/form-data with a field named "file"
+    const hasKey = Boolean(env.OCRSPACE_API_KEY);
+    if (!hasKey) {
+      return new Response(JSON.stringify({ error: true, message: "OCRSPACE_API_KEY missing at runtime" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
     const form = await request.formData();
     const file = form.get("file");
     if (!file || !(file instanceof Blob)) {
@@ -11,7 +23,6 @@ export const onRequestPost = async ({ request, env }: any) => {
       });
     }
 
-    // Forward to OCR.space
     const body = new FormData();
     body.append("language", "eng");
     body.append("isOverlayRequired", "false");
@@ -24,32 +35,36 @@ export const onRequestPost = async ({ request, env }: any) => {
       body,
     });
 
-    // Read raw text first; try JSON parse safely
+    const contentType = r.headers.get("content-type") || "";
     const raw = await r.text();
+
+    // Try to parse JSON, but still return JSON even if upstream gave HTML/text.
     let json: any = null;
-    try { json = JSON.parse(raw); } catch { /* keep raw for debugging */ }
+    if (contentType.includes("application/json")) {
+      try { json = JSON.parse(raw); } catch {}
+    }
 
     if (!r.ok) {
       return new Response(
-        JSON.stringify({ error: true, status: r.status, message: "OCR API error", raw }),
+        JSON.stringify({
+          error: true,
+          status: r.status,
+          upstreamContentType: contentType,
+          raw,
+        }),
         { status: 502, headers: { "content-type": "application/json" } }
       );
     }
 
-    // Normalize success payload
-    // OCR.space typical: { ParsedResults: [{ ParsedText: "..." }], ... }
-    if (json && json.ParsedResults && json.ParsedResults[0]) {
+    if (json?.ParsedResults?.[0]?.ParsedText != null) {
       return new Response(
-        JSON.stringify({
-          text: json.ParsedResults[0].ParsedText ?? "",
-          raw: json, // keep full response if you want to show confidence/lines later
-        }),
+        JSON.stringify({ text: json.ParsedResults[0].ParsedText, raw: json }),
         { headers: { "content-type": "application/json" } }
       );
     }
 
-    // Fallback: return whatever we got
-    return new Response(JSON.stringify(json ?? { raw }), {
+    // Fallback: return whatever upstream sent (wrapped in JSON)
+    return new Response(JSON.stringify({ raw, upstreamContentType: contentType }), {
       headers: { "content-type": "application/json" },
     });
   } catch (e: any) {
