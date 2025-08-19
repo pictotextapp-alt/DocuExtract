@@ -25,13 +25,13 @@ The `wrangler.toml` file is configured for Workers deployment:
 ```toml
 name = "pictotext-backend"
 main = "server/index.ts"
-compatibility_date = "2023-01-01"
-node_compat = true
+compatibility_date = "2024-08-19"
+compatibility_flags = ["nodejs_compat"]
 ```
 
 - **name**: Unique Worker name across Cloudflare
 - **main**: Entry point to your Express.js server
-- **node_compat**: Enables Node.js compatibility for Express, OCR libraries, etc.
+- **compatibility_flags**: Enables Node.js compatibility for Express, OCR libraries, etc.
 
 ## Environment Variables Required
 
