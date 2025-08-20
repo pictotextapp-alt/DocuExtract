@@ -243,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OCR Processing endpoint - supports both free and premium users
-  app.post("/api/extract-text", upload.single('image'), async (req, res) => {
+  app.post("/api/extract-text", upload.single('file'), async (req, res) => {
     try {
       const session = (req as any).session;
       const useFiltering = req.body.useFiltering === 'true';
