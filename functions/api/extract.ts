@@ -1,51 +1,35 @@
 // functions/api/extract.ts
 
-// Always-JSON GET (handy for quick checks)
-export const onRequestGet = async () => {
-  return json({ ok: true, message: "Use POST with multipart/form-data" }, 200);
-};
+export const onRequestPost: PagesFunction<{ OCRSPACE_API_KEY: string }> = async (ctx) => {
+  const url = new URL(ctx.request.url);
 
-// Main POST handler
-export const onRequestPost = async (ctx: any) => {
+  // ✅ Accept both /api/extract and /api/extract-text
+  if (!url.pathname.endsWith("/api/extract") && !url.pathname.endsWith("/api/extract-text")) {
+    return json({ error: true, message: "Not found" }, 404);
+  }
+
   try {
-    // 1) Parse multipart form-data
     const formData = await ctx.request.formData();
-    const file: any = formData.get("file");
+    const file = formData.get("file");
 
-    // Avoid relying on TS "File" type; just check shape at runtime
-    const isFileLike =
-      file &&
-      (typeof file.arrayBuffer === "function" || typeof file.stream === "function");
-
-    if (!isFileLike) {
-      return json(
-        { error: true, message: "No file provided (expect form-data field 'file')" },
-        400
-      );
+    // Check file
+    if (!(file instanceof File)) {
+      return json({ error: true, message: "No file provided (expect form-data field 'file')" }, 400);
     }
 
-    // 2) Runtime secret
-    const apiKey = ctx.env?.OCRSPACE_API_KEY;
+    // Check API key
+    const apiKey = ctx.env.OCRSPACE_API_KEY;
     if (!apiKey) {
       return json({ error: true, message: "OCRSPACE_API_KEY missing at runtime" }, 500);
     }
 
-    // 3) (Soft) validation — only if props exist
-    const MAX = 8 * 1024 * 1024; // 8MB
-    const okTypes = new Set(["image/png", "image/jpeg", "application/pdf"]);
-    if (typeof file.size === "number" && file.size > MAX) {
-      return json({ error: true, message: "File too large" }, 413);
-    }
-    if (file.type && !okTypes.has(file.type)) {
-      return json({ error: true, message: `Unsupported type: ${file.type}` }, 415);
-    }
-
-    // 4) Forward to OCR.space
+    // Build upstream form-data
     const upstream = new FormData();
-    upstream.append("file", file, file.name || "upload");
+    upstream.append("file", file, file.name || "upload.png");
     upstream.append("language", "eng");
     upstream.append("isOverlayRequired", "false");
 
+    // Call OCR.space
     const r = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
       headers: { apikey: apiKey },
@@ -56,24 +40,24 @@ export const onRequestPost = async (ctx: any) => {
     const body = contentType.includes("application/json") ? await r.json() : await r.text();
 
     if (!r.ok) {
-      // Always respond with JSON so the frontend .json() never fails
       return json(
         { error: true, status: r.status, upstreamContentType: contentType, raw: body },
         502
       );
     }
 
-    // 5) Normalize text
-    let text = "";
-    const parsed = (body as any)?.ParsedResults;
-    if (Array.isArray(parsed)) {
-      text = parsed.map((p: any) => p?.ParsedText ?? "").join("\n");
-    }
+    // Extract text
+    const text =
+      (body as any)?.ParsedResults?.map((p: any) => p.ParsedText).join("\n") ?? "";
 
     return json({ ok: true, text, raw: body }, 200);
   } catch (err: any) {
     return json({ error: true, message: err?.message || "Unhandled error" }, 500);
   }
+};
+
+export const onRequestGet: PagesFunction = async () => {
+  return json({ ok: true, message: "Use POST with multipart/form-data" }, 200);
 };
 
 // Small helper to guarantee JSON on every path
