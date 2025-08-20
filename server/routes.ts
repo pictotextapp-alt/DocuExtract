@@ -74,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({
             success: true,
             message: "Payment successful and account created! You can now sign in.",
-            paypalOrderId: mockPaypalOrderId,
+            paypalOrderId: paypalOrderId,
             accountCreated: true
           });
         } catch (userCreationError: any) {
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json({
             success: true,
             message: "Payment successful! Please try registering again.",
-            paypalOrderId: mockPaypalOrderId,
+            paypalOrderId: paypalOrderId,
             accountCreated: false,
             error: userCreationError.message
           });
@@ -92,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({
           success: true,
           message: "Payment successful! You can now create your account.",
-          paypalOrderId: mockPaypalOrderId
+          paypalOrderId: paypalOrderId
         });
       }
     } catch (error: any) {
