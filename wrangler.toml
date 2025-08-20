@@ -1,0 +1,23 @@
+name = "pictotext-backend"
+main = "server/index.ts"
+compatibility_date = "2024-08-19"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[[routes]]
+pattern = "pictotext.app/*"
+zone_name = "pictotext.app"
+
+[vars]
+NODE_ENV = "production"
+
+# Environment variables (set via wrangler secret put)
+# DATABASE_URL
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# PAYPAL_CLIENT_ID
+# PAYPAL_CLIENT_SECRET
+# OCR_SPACE_API_KEY
+# SESSION_SECRET
