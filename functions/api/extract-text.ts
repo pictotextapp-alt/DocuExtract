@@ -32,7 +32,7 @@ export const onRequestPost = async (ctx) => {
     const upstream = new FormData();
     upstream.append("file", file, file.name || "upload.png");
     upstream.append("language", "eng");
-    upstream.append("isOverlayRequired", "false");
+    upstream.append("isOverlayRequired", "true");
 
     const r = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
