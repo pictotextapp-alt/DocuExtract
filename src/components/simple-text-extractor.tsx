@@ -149,7 +149,7 @@ export default function SimpleTextExtractor() {
       formData.append('image', file);
       formData.append('useFiltering', useFiltering.toString());
 
-      const response = await fetch('/api/extract-text', {
+      const response = await fetch('/api/extract', {
         method: 'POST',
         credentials: 'include',
         body: formData,

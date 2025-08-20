@@ -83,7 +83,7 @@ const PhotoExtractor = () => {
 
   const extractTextMutation = useMutation({
     mutationFn: async (ocrRequest: OCRRequest): Promise<OCRResponse> => {
-      const response = await fetch("/api/extract-text", {
+      const response = await fetch("/api/extract", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
