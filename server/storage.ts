@@ -1,7 +1,4 @@
-import { type User, insertUserSchema } from "@shared/schema";
-import { type z } from "zod";
-
-type InsertUser = z.infer<typeof insertUserSchema>;
+import { type User, type InsertUser } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -10,7 +7,6 @@ import { randomUUID } from "crypto";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 }
 
@@ -31,34 +27,9 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
-  }
-
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    
-    // Handle password hashing if password is provided
-    let passwordHash: string | null = null;
-    if (insertUser.password) {
-      const bcrypt = await import("bcrypt");
-      passwordHash = await bcrypt.hash(insertUser.password, 12);
-    }
-    
-    const user: User = { 
-      id,
-      username: insertUser.username,
-      email: insertUser.email,
-      passwordHash,
-      oauthProvider: insertUser.oauthProvider || null,
-      oauthId: insertUser.oauthId || null,
-      monthlyUsageCount: 0,
-      lastUsageReset: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
   }
