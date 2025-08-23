@@ -24,7 +24,6 @@ import {
   LogOut
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { PostResultsAd } from "./AdUnit";
 
 interface ExtractionResult {
   extractedText: string;
@@ -537,9 +536,6 @@ export default function SimpleTextExtractor() {
             </Card>
           )}
 
-          {/* Post Results Ad - Only show after OCR results are displayed */}
-          <PostResultsAd show={!!(result && extractedText)} />
-          
           {/* Usage Warning for Non-Premium Users */}
           {isAuthenticated && !user?.isPremium && usage && usage.imageCount >= usage.dailyLimit - 1 && (
             <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">

@@ -1,16 +1,12 @@
 import SimpleTextExtractor from "@/components/simple-text-extractor";
 import Footer from "@/components/footer";
-import { SidebarAd, MobileBottomAd } from "@/components/AdUnit";
 
 const Home = () => {
   return (
     <div className="animate-fade-in">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Hero Section */}
-            <div className="text-center mb-12">
+        {/* Hero Section */}
+      <div className="text-center mb-12">
         <div className="flex items-center justify-center mb-8">
           <svg width="100" height="100" viewBox="0 0 80 80" className="mr-6">
             <defs>
@@ -148,17 +144,7 @@ const Home = () => {
             <div className="text-blue-100">Processing Time</div>
           </div>
         </div>
-          </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            <SidebarAd />
-          </div>
-        </div>
-
-        {/* Mobile Bottom Ad */}
-        <MobileBottomAd />
+      </div>
       </main>
       
       {/* Footer */}
