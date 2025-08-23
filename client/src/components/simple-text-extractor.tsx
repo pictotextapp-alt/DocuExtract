@@ -535,7 +535,7 @@ export default function SimpleTextExtractor() {
               </CardContent>
             </Card>
           )}
-
+          
           {/* Usage Warning for Non-Premium Users */}
           {isAuthenticated && !user?.isPremium && usage && usage.imageCount >= usage.dailyLimit - 1 && (
             <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
