@@ -94,12 +94,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentData = paypalPaymentSchema.parse(req.body);
 
       // Verify required PayPal data
-      if (!paymentData.paypalOrderId || !paymentData.payerID) {
-        return res.status(400).json({ 
-          error: "PayPal payment verification required",
-          missing: "PayPal order ID and payer ID required" 
-        });
-      }
+      //if (!paymentData.paypalOrderId || !paymentData.payerID) {
+      //  return res.status(400).json({ 
+       //   error: "PayPal payment verification required",
+      //    missing: "PayPal order ID and payer ID required" 
+     //   });
+     // }
 
       // Verify payment with PayPal API
       try {
