@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PayPal payment endpoint - MUST be called before registration
   app.post("/api/payment/paypal", async (req, res) => {
     try {
-      const paymentData = paypalPaymentSchema.parse(req.body);
+            const paymentData = paypalPaymentSchema.parse(req.body);
 
       // Verify required PayPal data
       //if (!paymentData.paypalOrderId || !paymentData.payerID) {

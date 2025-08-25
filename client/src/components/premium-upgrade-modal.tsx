@@ -25,21 +25,120 @@ export function PremiumUpgradeModal({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleUpgrade = async () => {
+      const handleUpgrade = async () => {
+        setIsProcessing(true);
+
+        try {
+          // Create PayPal order with return URLs
+          const orderResponse = await fetch("/api/paypal/order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              amount: "4.99",
+              currency: "USD",
+              intent: "CAPTURE"
+            }),
+          });
+
+          if (!orderResponse.ok) {
+            throw new Error("Failed to create payment order");
+          }
+
+          const orderData = await orderResponse.json();
+          console.log("PayPal order created:", orderData);
+
+          // Find the approval URL from PayPal response
+          const approvalUrl = orderData.links?.find(link => link.rel === 'approve')?.href;
+
+          if (!approvalUrl) {
+            throw new Error("PayPal approval URL not found");
+          }
+
+          // Store payment info for verification when user returns
+          sessionStorage.setItem('pendingPayment', JSON.stringify({
+            orderId: orderData.id,
+            email: user?.email || 'guest@example.com'
+          }));
+
+          // Redirect to PayPal for actual payment
+          window.location.href = approvalUrl;
+
+        } catch (error) {
+          console.error("Payment setup error:", error);
+          toast({
+            title: "Payment Error",
+            description: error instanceof Error ? error.message : "Payment setup failed. Please try again.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+        }
+      };
+
+  // Handle PayPal return after payment
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const PayerID = urlParams.get('PayerID');
+
+    if (token && PayerID) {
+      console.log("PayPal return detected:", { token, PayerID });
+      handlePayPalReturn(token, PayerID);
+    }
+  }, []);
+
+  const handlePayPalReturn = async (paypalOrderId: string, payerID: string) => {
+    const pendingPayment = sessionStorage.getItem('pendingPayment');
+    if (!pendingPayment) {
+      console.error("No pending payment found");
+      return;
+    }
+
+    const paymentData = JSON.parse(pendingPayment);
     setIsProcessing(true);
 
     try {
-      // Create PayPal order
-      const orderResponse = await fetch("/api/paypal/order", {
+      console.log("Verifying PayPal payment:", { paypalOrderId, payerID, email: paymentData.email });
+
+      const response = await fetch("/api/payment/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          amount: "4.99",
-          currency: "USD",
-          intent: "CAPTURE"
+          email: paymentData.email,
+          paypalOrderId: paypalOrderId,
+          payerID: payerID
         }),
       });
+
+      if (response.ok) {
+        sessionStorage.removeItem('pendingPayment');
+        toast({
+          title: "Welcome to Premium!",
+          description: "Your payment was successful. Enjoy unlimited OCR processing!",
+        });
+
+        // Clear URL parameters and refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => window.location.reload(), 2000);
+
+      } else {
+        const errorData = await response.json();
+        console.error("Payment verification failed:", errorData);
+        throw new Error(errorData.error || "Payment verification failed");
+      }
+
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      toast({
+        title: "Payment Verification Failed",
+        description: error instanceof Error ? error.message : "Please contact support if payment was deducted.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
       if (!orderResponse.ok) {
         throw new Error("Failed to create payment order");
