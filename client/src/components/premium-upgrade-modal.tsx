@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,7 +60,60 @@ export function PremiumUpgradeModal({
       setIsProcessing(false);
     }
   };
+  useEffect(() => {
+    // Check if user returned from PayPal
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const PayerID = urlParams.get('PayerID');
 
+    if (token && PayerID) {
+      // User completed PayPal payment, now notify backend
+      handlePayPalReturn(token, PayerID);
+    }
+  }, []);
+
+  const handlePayPalReturn = async (paypalOrderId: string, payerID: string) => {
+    setIsProcessing(true);
+
+    try {
+      // Get user email - you'll need to get this from your auth context
+      const email = user?.email || "user@example.com"; // Replace with actual user email
+
+      const response = await fetch("/api/payment/paypal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: email,
+          paypalOrderId: paypalOrderId,
+          payerID: payerID
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Payment verification failed");
+      }
+
+      toast({
+        title: "Success!",
+        description: "Welcome to PictoText Premium!",
+      });
+
+      setTimeout(() => window.location.reload(), 1000);
+
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Payment verification failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
   const features = [
     {
       icon: <Zap className="h-5 w-5 text-yellow-500" />,
