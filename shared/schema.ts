@@ -153,8 +153,10 @@ export type LoginCredentials = z.infer<typeof loginSchema>;
 // PayPal payment schema
 export const paypalPaymentSchema = z.object({
   email: z.string().email("Valid email is required"),
-  amount: z.string().regex(/^\d+\.\d{2}$/, "Amount must be in format 0.00"),
-  currency: z.string().default("USD"),
+  amount: z.string().regex(/^\d+\.\d{2}$/, "Amount must be in format 0.00").optional(),
+  currency: z.string().default("USD").optional(),
+  paypalOrderId: z.string().min(1, "PayPal Order ID is required"),
+  payerID: z.string().optional(),
 });
 
 export type PayPalPaymentData = z.infer<typeof paypalPaymentSchema>;
