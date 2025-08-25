@@ -83,7 +83,10 @@ export function PremiumUpgradeModal({
 
     if (token && PayerID) {
       console.log("PayPal return detected:", { token, PayerID });
-      handlePayPalReturn(token, PayerID);
+      const processPayPalReturn = async () => {
+        await handlePayPalReturn(token, PayerID);
+      };
+      processPayPalReturn();
     }
   }, []);
 
