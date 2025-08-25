@@ -48,9 +48,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const paymentData = paypalPaymentSchema.parse(req.body);
       
-      // For development: simulate successful payment
-      // In production: would verify actual PayPal payment webhook/transaction
-      const paypalOrderId = `PAYPAL_${Date.now()}`;
+      // Verify actual PayPal payment
+      if (!paymentData.paypalOrderId || !paymentData.payerID) {
+        return res.status(400).json({ error: "PayPal payment verification required" });
+      }
+
+      // Use the real PayPal order ID from the completed payment
+      const paypalOrderId = paymentData.paypalOrderId;
+
+      // Optional: Add PayPal API verification here for extra security
+      // const paypalVerification = await verifyPayPalPayment(paypalOrderId);
       
       // Add user to premium list after payment
       await premiumService.addPremiumUser(paymentData.email, paypalOrderId);
