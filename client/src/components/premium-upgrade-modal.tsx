@@ -26,15 +26,6 @@ export function PremiumUpgradeModal({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleUpgrade = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Please log in first",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsProcessing(true);
 
     try {
@@ -56,30 +47,8 @@ export function PremiumUpgradeModal({
 
       const orderData = await orderResponse.json();
 
-      // For development, simulate immediate payment success
-      // In production, this would redirect to PayPal
-      const captureResponse = await fetch(`/api/paypal/order/${orderData.id}/capture`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      if (!captureResponse.ok) {
-        throw new Error("Payment processing failed");
-      }
-
-      toast({
-        title: "Success!",
-        description: "Welcome to PictoText Premium! You now have unlimited image extractions.",
-        duration: 5000,
-      });
-
-      onClose();
-
-      // Refresh page to update user status
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Redirect to PayPal for actual payment
+      window.location.href = `https://www.paypal.com/checkoutnow?token=${orderData.id}`;
 
     } catch (error) {
       console.error("Upgrade error:", error);
@@ -88,7 +57,6 @@ export function PremiumUpgradeModal({
         description: error instanceof Error ? error.message : "Payment failed. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
