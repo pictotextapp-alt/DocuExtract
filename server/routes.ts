@@ -26,17 +26,62 @@ try {
   console.warn("OCR Service not initialized:", error);
 }
 
+// PayPal verification function
+async function verifyPayPalPayment(orderId: string) {
+  const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+  const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+  const PAYPAL_BASE_URL = "https://api-m.paypal.com"; // Live environment
+
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+    throw new Error("PayPal credentials not configured");
+  }
+
+  // Get PayPal access token
+  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+
+  const tokenResponse = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials'
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`PayPal token request failed: ${tokenResponse.status}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  // Verify the order
+  const orderResponse = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    }
+  });
+
+  if (!orderResponse.ok) {
+    throw new Error(`PayPal API error: ${orderResponse.status}`);
+  }
+
+  return await orderResponse.json();
+}
+
 // Premium authentication middleware - only premium users can log in
 async function requirePremiumAuth(req: any, res: any, next: any) {
   if (!req.session?.userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-  
+
   const user = await premiumService.getUserById(req.session.userId);
   if (!user) {
     return res.status(401).json({ error: "User not found" });
   }
-  
+
   req.user = user;
   next();
 }
@@ -47,21 +92,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payment/paypal", async (req, res) => {
     try {
       const paymentData = paypalPaymentSchema.parse(req.body);
-      
-      // Verify actual PayPal payment
+
+      // Verify required PayPal data
       if (!paymentData.paypalOrderId || !paymentData.payerID) {
-        return res.status(400).json({ error: "PayPal payment verification required" });
+        return res.status(400).json({ 
+          error: "PayPal payment verification required",
+          missing: "PayPal order ID and payer ID required" 
+        });
       }
 
-      // Use the real PayPal order ID from the completed payment
+      // Verify payment with PayPal API
+      try {
+        const paypalVerification = await verifyPayPalPayment(paymentData.paypalOrderId);
+
+        if (paypalVerification.status !== 'COMPLETED') {
+          return res.status(400).json({ 
+            error: "Payment not completed",
+            status: paypalVerification.status 
+          });
+        }
+
+        // Verify payment amount (optional but recommended)
+        const expectedAmount = "4.99"; // Your premium price - adjust as needed
+        const paidAmount = paypalVerification.purchase_units[0].amount.value;
+
+        if (parseFloat(paidAmount) < parseFloat(expectedAmount)) {
+          return res.status(400).json({ 
+            error: "Payment amount insufficient",
+            expected: expectedAmount,
+            received: paidAmount 
+          });
+        }
+
+        console.log(`Payment verified: ${paymentData.email} paid ${paidAmount}`);
+
+      } catch (verificationError: any) {
+        console.error("PayPal verification failed:", verificationError);
+        return res.status(400).json({ 
+          error: "PayPal payment verification failed",
+          details: verificationError.message 
+        });
+      }
+
+      // Use the real PayPal order ID (not fake one)
       const paypalOrderId = paymentData.paypalOrderId;
 
-      // Optional: Add PayPal API verification here for extra security
-      // const paypalVerification = await verifyPayPalPayment(paypalOrderId);
-      
-      // Add user to premium list after payment
+      // Add user to premium list after verified payment
       await premiumService.addPremiumUser(paymentData.email, paypalOrderId);
-      
+
       // Check if there's pending registration data for this email
       const pendingRegistration = (req as any).session.pendingRegistration;
       if (pendingRegistration && pendingRegistration.email === paymentData.email) {
@@ -72,12 +150,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: pendingRegistration.email,
             password: pendingRegistration.password
           });
-          
+
           // Clear pending registration data
           delete (req as any).session.pendingRegistration;
-          
+
           console.log(`User account created after payment: ${user.email}`);
-          
+
           res.json({
             success: true,
             message: "Payment successful and account created! You can now sign in.",
@@ -114,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/register", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if email is in premium users list
       const isPremium = await premiumService.isPremiumUser(userData.email);
       if (!isPremium) {
@@ -124,29 +202,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: userData.email,
           password: userData.password
         };
-        
+
         return res.status(402).json({ 
           error: "Payment required to create premium account.",
           requiresPayment: true,
           email: userData.email
         });
       }
-      
+
       // Hash password if provided
       let passwordHash: string | undefined;
       if (userData.password) {
         const bcrypt = await import("bcrypt");
         passwordHash = await bcrypt.hash(userData.password, 12);
       }
-      
+
       const user = await premiumService.createUser({
         ...userData,
         passwordHash
       });
-      
+
       // Automatically log in the user after registration
       (req as any).session.userId = user.id;
-      
+
       res.json({
         message: "Premium account created successfully",
         user: {
@@ -168,14 +246,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const credentials = loginSchema.parse(req.body);
       const user = await premiumService.authenticateUser(credentials.username, credentials.password);
-      
+
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      
+
       // Create session
       (req as any).session.userId = user.id;
-      
+
       res.json({ 
         success: true, 
         user: {
@@ -221,7 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/usage", async (req, res) => {
     try {
       const session = (req as any).session;
-      
+
       if (session.userId) {
         // Premium authenticated user
         const usage = await premiumService.getMonthlyUsage(session.userId);
@@ -254,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = (req as any).session;
       const useFiltering = req.body.useFiltering === 'true';
-      
+
       if (!req.file) {
         return res.status(400).json({ error: "No image file provided" });
       }
@@ -273,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Premium authenticated user
         const usage = await premiumService.getMonthlyUsage(session.userId);
         canProcess = usage.canProcess;
-        
+
         if (!canProcess) {
           return res.status(429).json({ 
             error: "Monthly limit of 1500 extractions exceeded",
@@ -285,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Free anonymous user
         const usage = freeUsageService.getCurrentUsage(req);
         canProcess = usage.canProcess;
-        
+
         if (!canProcess) {
           return res.status(429).json({ 
             error: "Daily limit of 3 free extractions exceeded. Purchase premium for 1500 monthly extractions.",
@@ -298,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process the image with OCR
       const result = await ocrService.extractTextFromImage(req.file.buffer, useFiltering);
-      
+
       // Record the usage
       if (isPremium) {
         await premiumService.incrementMonthlyUsage(session.userId);
@@ -306,15 +384,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const usage = freeUsageService.incrementUsage(req);
         freeUsageService.setCookieInResponse(res, usage.cookieId);
       }
-      
+
       res.json(result);
     } catch (error) {
       console.error("OCR processing error:", error);
-      
+
       if (error instanceof Error) {
         return res.status(500).json({ error: error.message });
       }
-      
+
       res.status(500).json({ error: "Failed to process image" });
     }
   });
@@ -356,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.redirect('/?payment=required&email=' + encodeURIComponent(user.email));
         return;
       }
-      
+
       // Successful authentication for premium user
       if (user && user.id) {
         (req as any).session.userId = user.id;
