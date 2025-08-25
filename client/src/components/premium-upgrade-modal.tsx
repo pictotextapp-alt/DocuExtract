@@ -49,7 +49,7 @@ export function PremiumUpgradeModal({
           console.log("PayPal order created:", orderData);
 
           // Find the approval URL from PayPal response
-          const approvalUrl = orderData.links?.find(link => link.rel === 'approve')?.href;
+          const approvalUrl = orderData.links?.find((link: any) => link.rel === 'approve')?.href;
 
           if (!approvalUrl) {
             throw new Error("PayPal approval URL not found");
@@ -140,78 +140,6 @@ export function PremiumUpgradeModal({
     }
   };
 
-      if (!orderResponse.ok) {
-        throw new Error("Failed to create payment order");
-      }
-
-      const orderData = await orderResponse.json();
-
-      // Redirect to PayPal for actual payment
-      window.location.href = `https://www.paypal.com/checkoutnow?token=${orderData.id}`;
-
-    } catch (error) {
-      console.error("Upgrade error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Payment failed. Please try again.",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
-    }
-  };
-  useEffect(() => {
-    // Check if user returned from PayPal
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const PayerID = urlParams.get('PayerID');
-
-    if (token && PayerID) {
-      // User completed PayPal payment, now notify backend
-      handlePayPalReturn(token, PayerID);
-    }
-  }, []);
-
-  const handlePayPalReturn = async (paypalOrderId: string, payerID: string) => {
-    setIsProcessing(true);
-
-    try {
-      // Get user email - you'll need to get this from your auth context
-      const email = user?.email || "user@example.com"; // Replace with actual user email
-
-      const response = await fetch("/api/payment/paypal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email: email,
-          paypalOrderId: paypalOrderId,
-          payerID: payerID
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Payment verification failed");
-      }
-
-      toast({
-        title: "Success!",
-        description: "Welcome to PictoText Premium!",
-      });
-
-      setTimeout(() => window.location.reload(), 1000);
-
-    } catch (error) {
-      console.error("Payment verification error:", error);
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Payment verification failed",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
   
   const features = [
     {
