@@ -3,77 +3,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Crown, Zap, Shield, Clock } from "lucide-react";
+import { CheckCircle, Star, Zap, Shield, CreditCard } from "lucide-react";
 
 interface PremiumUpgradeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentUsage?: {
-    imageCount: number;
-    dailyLimit: number;
-  };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user?: { email?: string } | null;
 }
 
-export function PremiumUpgradeModal({ 
-  isOpen, 
-  onClose, 
-  currentUsage 
-}: PremiumUpgradeModalProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
+export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgradeModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-
-      const handleUpgrade = async () => {
-        setIsProcessing(true);
-
-        try {
-          // Create PayPal order with return URLs
-          const orderResponse = await fetch("/api/paypal/order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              amount: "4.99",
-              currency: "USD",
-              intent: "CAPTURE"
-            }),
-          });
-
-          if (!orderResponse.ok) {
-            throw new Error("Failed to create payment order");
-          }
-
-          const orderData = await orderResponse.json();
-          console.log("PayPal order created:", orderData);
-
-          // Find the approval URL from PayPal response
-          const approvalUrl = orderData.links?.find((link: any) => link.rel === 'approve')?.href;
-
-          if (!approvalUrl) {
-            throw new Error("PayPal approval URL not found");
-          }
-
-          // Store payment info for verification when user returns
-          sessionStorage.setItem('pendingPayment', JSON.stringify({
-            orderId: orderData.id,
-            email: user?.email || 'guest@example.com'
-          }));
-
-          // Redirect to PayPal for actual payment
-          window.location.href = approvalUrl;
-
-        } catch (error) {
-          console.error("Payment setup error:", error);
-          toast({
-            title: "Payment Error",
-            description: error instanceof Error ? error.message : "Payment setup failed. Please try again.",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-        }
-      };
+  const { toast } = useToast();
 
   // Handle PayPal return after payment
   useEffect(() => {
@@ -83,10 +24,7 @@ export function PremiumUpgradeModal({
 
     if (token && PayerID) {
       console.log("PayPal return detected:", { token, PayerID });
-      const processPayPalReturn = async () => {
-        await handlePayPalReturn(token, PayerID);
-      };
-      processPayPalReturn();
+      handlePayPalReturn(token, PayerID);
     }
   }, []);
 
@@ -143,159 +81,145 @@ export function PremiumUpgradeModal({
     }
   };
 
-  
+  const handleUpgrade = async () => {
+    setIsProcessing(true);
+
+    try {
+      // Create PayPal order with return URLs
+      const orderResponse = await fetch("/api/paypal/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          amount: "4.99",
+          currency: "USD",
+          intent: "CAPTURE"
+        }),
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error("Failed to create payment order");
+      }
+
+      const orderData = await orderResponse.json();
+      console.log("PayPal order created:", orderData);
+
+      // Find the approval URL from PayPal response
+      const approvalUrl = orderData.links?.find(link => link.rel === 'approve')?.href;
+
+      if (!approvalUrl) {
+        throw new Error("PayPal approval URL not found");
+      }
+
+      // Store payment info for verification when user returns
+      sessionStorage.setItem('pendingPayment', JSON.stringify({
+        orderId: orderData.id,
+        email: user?.email || 'guest@example.com'
+      }));
+
+      // Redirect to PayPal for actual payment
+      window.location.href = approvalUrl;
+
+    } catch (error) {
+      console.error("Payment setup error:", error);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Payment setup failed. Please try again.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  };
+
   const features = [
     {
-      icon: <Zap className="h-5 w-5 text-yellow-500" />,
+      icon: <Zap className="w-5 h-5 text-blue-500" />,
       title: "Unlimited Extractions",
-      description: "No daily limits - extract text from as many images as you need"
+      description: "Process unlimited documents and images",
     },
     {
-      icon: <Clock className="h-5 w-5 text-blue-500" />,
-      title: "Priority Processing",
-      description: "Your images get processed faster with premium priority"
+      icon: <Shield className="w-5 h-5 text-green-500" />,
+      title: "Priority Support",
+      description: "Get help faster with premium support",
     },
     {
-      icon: <Shield className="h-5 w-5 text-green-500" />,
-      title: "Advanced OCR",
-      description: "Access to enhanced OCR features and better accuracy"
+      icon: <Star className="w-5 h-5 text-yellow-500" />,
+      title: "Advanced Features",
+      description: "Access to premium OCR engines and formats",
     },
-    {
-      icon: <Crown className="h-5 w-5 text-purple-500" />,
-      title: "Premium Support",
-      description: "Priority customer support and feature requests"
-    }
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
-            <Crown className="h-6 w-6 text-yellow-500" />
-            Upgrade to PictoText Premium
+          <DialogTitle className="text-2xl font-bold text-center">
+            Upgrade to Premium
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Current Usage Alert */}
-          {currentUsage && (
-            <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-medium">
-                    Daily Limit Reached: {currentUsage.imageCount}/{currentUsage.dailyLimit} images used today
-                  </span>
-                </div>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Upgrade now to continue extracting text without waiting!
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Pricing Card */}
-          <Card className="relative overflow-hidden border-2 border-primary">
-            <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1">
-              <Badge variant="secondary" className="bg-primary text-primary-foreground">
-                Most Popular
-              </Badge>
-            </div>
-            
-            <CardHeader className="text-center pb-2">
-              <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-2">
-                <Crown className="h-6 w-6 text-white" />
+        <div className="space-y-6">
+          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader className="text-center pb-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800 px-3 py-1">
+                  Most Popular
+                </Badge>
               </div>
-              <CardTitle className="text-2xl">Premium Plan</CardTitle>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-4xl font-bold">$4.99</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
+              <CardTitle className="text-3xl font-bold text-slate-800">
+                $4.99<span className="text-lg font-normal text-slate-600">/month</span>
+              </CardTitle>
+              <p className="text-slate-600 text-sm">
+                Unlimited OCR processing for your business
+              </p>
             </CardHeader>
-            
             <CardContent className="space-y-4">
-              <div className="grid gap-3">
-                {features.map((feature, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    {feature.icon}
-                    <div>
-                      <p className="font-medium">{feature.title}</p>
-                      <p className="text-sm text-muted-foreground">{feature.description}</p>
-                    </div>
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  {feature.icon}
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-800 text-sm">
+                      {feature.title}
+                    </h4>
+                    <p className="text-slate-600 text-xs">
+                      {feature.description}
+                    </p>
                   </div>
-                ))}
-              </div>
-              
-              <div className="pt-4 border-t">
-                <Button 
-                  onClick={handleUpgrade}
-                  disabled={isProcessing}
-                  className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  data-testid="button-upgrade-premium"
-                >
-                  {isProcessing ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      <Crown className="mr-2 h-5 w-5" />
-                      Upgrade to Premium
-                    </>
-                  )}
-                </Button>
-              </div>
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Comparison */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Free Plan</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  3 images per day
-                </p>
-                <p className="flex items-center gap-2 text-muted-foreground">
-                  <span className="w-4 h-4 rounded-full bg-muted-foreground/20"></span>
-                  Basic OCR accuracy
-                </p>
-                <p className="flex items-center gap-2 text-muted-foreground">
-                  <span className="w-4 h-4 rounded-full bg-muted-foreground/20"></span>
-                  Standard processing
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-primary">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                  Premium Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Unlimited images
-                </p>
-                <p className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Enhanced OCR accuracy
-                </p>
-                <p className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
-                  Priority processing
-                </p>
-              </CardContent>
-            </Card>
+          <div className="space-y-3">
+            <Button
+              onClick={handleUpgrade}
+              disabled={isProcessing}
+              className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-medium py-3"
+              data-testid="button-paypal-pay"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="w-4 h-4 mr-2 animate-spin border-2 border-white border-t-transparent rounded-full" />
+                  Processing Payment...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Pay with PayPal - $4.99
+                </>
+              )}
+            </Button>
+
+            <p className="text-xs text-slate-500 text-center">
+              By clicking "Pay with PayPal", you'll be redirected to PayPal to complete your payment securely.
+            </p>
           </div>
 
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Secure payment processed by PayPal</p>
-            <p>Cancel anytime • No long-term commitments</p>
+          <div className="text-center">
+            <p className="text-xs text-slate-400">
+              Cancel anytime • Secure payments • Money-back guarantee
+            </p>
           </div>
         </div>
       </DialogContent>
