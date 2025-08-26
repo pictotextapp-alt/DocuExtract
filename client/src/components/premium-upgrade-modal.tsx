@@ -20,19 +20,25 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Log ALL parameters PayPal sends back
-    console.log("All URL parameters:", Object.fromEntries(urlParams));
+    // Convert URLSearchParams to object and log each parameter
+    const allParams = {};
+    for (const [key, value] of urlParams.entries()) {
+      allParams[key] = value;
+    }
+
+    console.log("All URL parameters:", allParams);
+    console.log("Current URL:", window.location.href);
 
     const token = urlParams.get('token');
     const PayerID = urlParams.get('PayerID');
 
-    console.log("PayPal return values:", { token, PayerID });
+    console.log("Extracted values:", { token, PayerID });
 
     if (token && PayerID) {
-      console.log("PayPal return detected:", { token, PayerID });
+      console.log("Processing PayPal return");
       handlePayPalReturn(token, PayerID);
     } else {
-      console.log("PayPal parameters missing - not processing return");
+      console.log("No PayPal parameters found in URL");
     }
   }, []);
 

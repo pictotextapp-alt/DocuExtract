@@ -70,7 +70,6 @@ export async function getClientToken() {
 export async function createPaypalOrder(req: Request, res: Response) {
   try {
     const { amount, currency, intent } = req.body;
-
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return res
         .status(400)
@@ -78,13 +77,11 @@ export async function createPaypalOrder(req: Request, res: Response) {
           error: "Invalid amount. Amount must be a positive number.",
         });
     }
-
     if (!currency) {
       return res
         .status(400)
         .json({ error: "Invalid currency. Currency is required." });
     }
-
     if (!intent) {
       return res
         .status(400)
@@ -102,16 +99,18 @@ export async function createPaypalOrder(req: Request, res: Response) {
             },
           },
         ],
+        applicationContext: {
+          returnUrl: `https://docu-extract-sivask209.replit.app/`,
+          cancelUrl: `https://docu-extract-sivask209.replit.app/`,
+          shippingPreference: "NO_SHIPPING"
+        },
       },
       prefer: "return=minimal",
     };
 
-    const { body, ...httpResponse } =
-          await ordersController.createOrder(collect);
-
+    const { body, ...httpResponse } = await ordersController.createOrder(collect);
     const jsonResponse = JSON.parse(String(body));
     const httpStatusCode = httpResponse.statusCode;
-
     res.status(httpStatusCode).json(jsonResponse);
   } catch (error) {
     console.error("Failed to create order:", error);
