@@ -30,7 +30,10 @@ try {
 async function verifyPayPalPayment(orderId: string) {
   const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
   const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
-  const PAYPAL_BASE_URL = "https://api-m.paypal.com"; // Live environment
+  // Use sandbox for development, live for production
+  const PAYPAL_BASE_URL = process.env.NODE_ENV === "production" 
+    ? "https://api-m.paypal.com" 
+    : "https://api-m.sandbox.paypal.com";
 
   if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
     throw new Error("PayPal credentials not configured");
@@ -91,15 +94,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PayPal payment endpoint - MUST be called before registration
   app.post("/api/payment/paypal", async (req, res) => {
     try {
-            const paymentData = paypalPaymentSchema.parse(req.body);
-
-      // Verify required PayPal data
-      //if (!paymentData.paypalOrderId || !paymentData.payerID) {
-      //  return res.status(400).json({ 
-       //   error: "PayPal payment verification required",
-      //    missing: "PayPal order ID and payer ID required" 
-     //   });
-     // }
+      console.log("PayPal payment request body:", req.body);
+      const paymentData = paypalPaymentSchema.parse(req.body);
+      console.log("Parsed payment data:", paymentData);
 
       // Verify payment with PayPal API
       try {
