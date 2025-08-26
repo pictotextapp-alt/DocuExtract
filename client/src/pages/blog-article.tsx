@@ -6,6 +6,7 @@ import { Clock, User, Calendar, ArrowLeft, ArrowRight, Home } from "lucide-react
 import { blogArticles } from "@/data/blog-articles";
 import { AdContainer } from "@/components/ad-container";
 import { ArticleContent } from "@/components/article-content";
+import { SchemaMarkup } from "@/components/schema-markup";
 
 export default function BlogArticle() {
   const { slug } = useParams<{ slug: string }>();
@@ -36,6 +37,19 @@ export default function BlogArticle() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <SchemaMarkup 
+        type="blog-article" 
+        articleData={{
+          title: article.title,
+          description: article.excerpt,
+          author: article.author,
+          publishedDate: article.publishedDate,
+          slug: article.slug,
+          content: article.content,
+          readingTime: article.readingTime,
+          tags: article.tags
+        }}
+      />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8">
         <Link href="/" className="hover:text-slate-700 transition-colors">

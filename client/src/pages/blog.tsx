@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Calendar, ArrowRight } from "lucide-react";
 import { blogArticles } from "@/data/blog-articles";
+import { SchemaMarkup } from "@/components/schema-markup";
 
 export default function Blog() {
   return (
     <div className="container mx-auto py-12 px-4 max-w-6xl">
+      <SchemaMarkup type="blog" />
       {/* Header */}
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-slate-800 mb-4">

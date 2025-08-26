@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { HelmetProvider } from 'react-helmet-async';
 import Navigation from "@/components/navigation";
 import { HeaderAdBanner } from "@/components/header-ad-banner";
 import Home from "@/pages/home";
@@ -33,18 +34,20 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <div className="min-h-screen bg-slate-50">
-            <Navigation />
-            <HeaderAdBanner />
-            <Router />
-          </div>
-          <Toaster />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <div className="min-h-screen bg-slate-50">
+              <Navigation />
+              <HeaderAdBanner />
+              <Router />
+            </div>
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 

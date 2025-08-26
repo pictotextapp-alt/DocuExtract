@@ -1,10 +1,12 @@
 import SimpleTextExtractor from "@/components/simple-text-extractor";
 import Footer from "@/components/footer";
 import { AdContainer } from "@/components/ad-container";
+import { SchemaMarkup } from "@/components/schema-markup";
 
 const Home = () => {
   return (
     <div className="animate-fade-in">
+      <SchemaMarkup type="homepage" />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
