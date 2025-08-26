@@ -1,5 +1,4 @@
-import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Clock, Bell } from "lucide-react";
 
@@ -16,6 +15,9 @@ export function ComingSoonModal({ open, onOpenChange }: ComingSoonModalProps) {
           <DialogTitle className="text-xl font-bold text-center">
             Coming Soon
           </DialogTitle>
+          <DialogDescription className="text-center text-slate-600">
+            Premium features are in development
+          </DialogDescription>
         </DialogHeader>
 
         <div className="text-center space-y-6 py-4">

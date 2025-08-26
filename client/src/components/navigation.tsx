@@ -30,6 +30,7 @@ const Navigation = () => {
 
   const navItems = [
     { path: "/", label: "Home", icon: "fas fa-home" },
+    { path: "/blog", label: "Blog", icon: "fas fa-newspaper" },
   ];
 
   const isActive = (path: string) => {

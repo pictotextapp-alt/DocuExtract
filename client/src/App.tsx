@@ -8,6 +8,8 @@ import Navigation from "@/components/navigation";
 import Home from "@/pages/home";
 import Settings from "@/pages/settings";
 import Premium from "@/pages/premium";
+import Blog from "@/pages/blog";
+import BlogArticle from "@/pages/blog-article";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import RefundPolicy from "@/pages/refund-policy";
@@ -18,6 +20,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/premium" component={Premium} />
+      <Route path="/blog" component={Blog} />
+      <Route path="/blog/:slug" component={BlogArticle} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/refund-policy" component={RefundPolicy} />
