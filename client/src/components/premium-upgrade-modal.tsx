@@ -19,26 +19,28 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
   // Handle PayPal return after payment
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-
-    // Convert URLSearchParams to object and log each parameter
-    const allParams = {};
-    for (const [key, value] of urlParams.entries()) {
-      allParams[key] = value;
-    }
-
-    console.log("All URL parameters:", allParams);
-    console.log("Current URL:", window.location.href);
-
+    
+    // Check for payment success/cancel
+    const paymentStatus = urlParams.get('payment');
     const token = urlParams.get('token');
     const PayerID = urlParams.get('PayerID');
 
-    console.log("Extracted values:", { token, PayerID });
+    console.log("PayPal return parameters:", { paymentStatus, token, PayerID });
 
-    if (token && PayerID) {
-      console.log("Processing PayPal return");
+    if (paymentStatus === 'success' && token && PayerID) {
+      console.log("Processing successful PayPal payment");
       handlePayPalReturn(token, PayerID);
-    } else {
-      console.log("No PayPal parameters found in URL");
+    } else if (paymentStatus === 'cancel') {
+      console.log("PayPal payment was cancelled");
+      toast({
+        title: "Payment Cancelled",
+        description: "You cancelled the payment process.",
+        variant: "default",
+      });
+    } else if (token && PayerID) {
+      // Legacy support for direct PayPal redirect (without payment parameter)
+      console.log("Processing PayPal return (legacy)");
+      handlePayPalReturn(token, PayerID);
     }
   }, []);
 
@@ -119,7 +121,7 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
       console.log("PayPal order created:", orderData);
 
       // Find the approval URL from PayPal response
-      const approvalUrl = orderData.links?.find(link => link.rel === 'approve')?.href;
+      const approvalUrl = orderData.links?.find((link: any) => link.rel === 'approve')?.href;
 
       if (!approvalUrl) {
         throw new Error("PayPal approval URL not found");

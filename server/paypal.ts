@@ -88,6 +88,9 @@ export async function createPaypalOrder(req: Request, res: Response) {
         .json({ error: "Invalid intent. Intent is required." });
     }
 
+    // Dynamic host detection for return URLs
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
     const collect = {
       body: {
         intent: intent,
@@ -100,9 +103,8 @@ export async function createPaypalOrder(req: Request, res: Response) {
           },
         ],
         applicationContext: {
-          returnUrl: `https://docu-extract-sivask209.replit.app/`,
-          cancelUrl: `https://docu-extract-sivask209.replit.app/`,
-          shippingPreference: "NO_SHIPPING"
+          returnUrl: `${baseUrl}?payment=success`,
+          cancelUrl: `${baseUrl}?payment=cancel`,
         },
       },
       prefer: "return=minimal",

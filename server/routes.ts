@@ -100,12 +100,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify payment with PayPal API
       try {
+        console.log("Verifying PayPal order:", paymentData.paypalOrderId);
         const paypalVerification = await verifyPayPalPayment(paymentData.paypalOrderId);
+        console.log("PayPal verification result:", paypalVerification);
 
-        if (paypalVerification.status !== 'COMPLETED') {
+        if (paypalVerification.status !== 'APPROVED' && paypalVerification.status !== 'COMPLETED') {
           return res.status(400).json({ 
-            error: "Payment not completed",
-            status: paypalVerification.status 
+            error: "Payment not approved or completed",
+            status: paypalVerification.status,
+            details: "Payment must be approved by user before verification"
           });
         }
 
