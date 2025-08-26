@@ -21,14 +21,30 @@ export class OCRService {
     useFiltering = false
   ): Promise<OCRResult> {
     try {
-      // Try OCR.space API first with a shorter timeout
-      try {
-        return await this.extractWithOCRSpace(imageBuffer, useFiltering);
-      } catch (error) {
-        console.log("OCR.space failed, falling back to local Tesseract:", (error as Error).message);
-        // Fallback to local Tesseract processing
-        return await this.extractWithTesseract(imageBuffer, useFiltering);
+      // Try OCR.space API first with retry
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          console.log(`OCR.space attempt ${attempt}/2`);
+          return await this.extractWithOCRSpace(imageBuffer, useFiltering);
+        } catch (error) {
+          const errorMsg = (error as Error).message;
+          console.log(`OCR.space attempt ${attempt} failed:`, errorMsg);
+          
+          if (attempt === 2) {
+            console.log("OCR.space failed after 2 attempts, falling back to local Tesseract");
+            // Fallback to local Tesseract processing
+            return await this.extractWithTesseract(imageBuffer, useFiltering);
+          }
+          
+          // Wait 2 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
+      
+      // This should never be reached, but TypeScript requires it
+      console.log("Unexpected flow - falling back to Tesseract");
+      return await this.extractWithTesseract(imageBuffer, useFiltering);
+      
     } catch (error) {
       console.error("All OCR methods failed:", error);
       throw new Error("OCR processing failed. Please try again with a different image.");
@@ -54,15 +70,17 @@ export class OCRService {
     const mimeType = this.detectMimeType(processedBuffer);
     const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-    // Prepare FormData for OCR.space API
+    // Prepare FormData for OCR.space API with optimized settings
     const formData = new FormData();
     formData.append("base64Image", dataUrl);
     formData.append("language", "eng");
-    formData.append("OCREngine", "2");
+    formData.append("OCREngine", "2"); // Use OCR Engine 2 for better accuracy
     formData.append("detectOrientation", "true");
     formData.append("scale", "true");
     formData.append("isOverlayRequired", "false");
-    formData.append("isTable", "true");
+    formData.append("isTable", "false"); // Disable table detection for better general text extraction
+    formData.append("detectCheckbox", "false");
+    formData.append("checkboxTemplate", "0");
 
     const response = await fetch("https://api.ocr.space/parse/image", {
       method: "POST",
@@ -70,11 +88,13 @@ export class OCRService {
         "apikey": this.apiKey,
       },
       body: formData,
-      signal: AbortSignal.timeout(30000) // 30 seconds timeout
+      signal: AbortSignal.timeout(60000) // 60 seconds timeout for complex images
     });
 
     if (!response.ok) {
-      throw new Error(`OCR API request failed: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`OCR API error details:`, errorText);
+      throw new Error(`OCR API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const ocrResult = await response.json();
