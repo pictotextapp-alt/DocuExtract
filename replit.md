@@ -6,12 +6,12 @@ PictoText is a professional web application for extracting and manipulating text
 
 ## Recent Changes (August 26, 2025)
 
-✓ **PayPal Payment Flow Fix**: Fixed critical deployment error in premium upgrade modal async/await syntax
-✓ **PayPal Environment Configuration**: Updated PayPal API to use sandbox for development, live for production
-✓ **Payment Return URLs**: Added proper return and cancel URLs to PayPal order creation for complete payment flow
-✓ **Enhanced Error Handling**: Improved PayPal payment verification with detailed logging and error messages
-✓ **Frontend Payment Detection**: Updated payment modal to handle both success/cancel parameters and legacy token flow
-✓ **TypeScript Error Resolution**: Fixed all LSP diagnostics in payment components for clean deployment
+✓ **Blog Section Added**: Complete blog functionality with /blog route and individual article pages (/blog/article-title)
+✓ **Professional Blog Design**: Clean, responsive blog layout matching current site styling
+✓ **Rich Content Library**: 5 detailed articles about OCR, text extraction, and document processing topics
+✓ **Navigation Integration**: Added "Blog" link to main header navigation
+✓ **Coming Soon Premium Modal**: Replaced PayPal payment flow with "Coming Soon" messaging and email collection
+✓ **Staff Writer Attribution**: Updated all blog articles to use "Staff Writer" instead of individual author names
 
 ## Previous Changes (August 19, 2025)
 

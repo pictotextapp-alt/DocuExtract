@@ -50,7 +50,7 @@ The future of OCR lies in intelligent document understanding. We're moving towar
 
 As we continue to advance, OCR will become an invisible but essential part of our digital infrastructure, enabling seamless transitions between physical and digital information.
     `,
-    author: "Dr. Sarah Chen",
+    author: "Staff Writer",
     publishedDate: "2025-01-15",
     readingTime: "5 min",
     tags: ["OCR", "Machine Learning", "Technology", "AI"]
@@ -127,7 +127,7 @@ Track key metrics to evaluate your digitization efforts:
 
 By following these best practices, organizations can create high-quality digital archives that serve their needs for years to come.
     `,
-    author: "Michael Rodriguez",
+    author: "Staff Writer",
     publishedDate: "2025-01-10",
     readingTime: "7 min",
     tags: ["Digitization", "Best Practices", "Document Management", "Workflow"]
@@ -256,7 +256,7 @@ Establish ongoing monitoring to maintain high accuracy:
 
 By implementing these strategies systematically, organizations can achieve and maintain OCR accuracy rates above 99%, enabling reliable automated document processing workflows.
     `,
-    author: "Dr. Elena Vasquez",
+    author: "Staff Writer",
     publishedDate: "2025-01-05",
     readingTime: "8 min",
     tags: ["OCR", "Accuracy", "Optimization", "Quality Assurance"]
@@ -423,7 +423,7 @@ Establish KPIs to measure success:
 
 By following this systematic approach, you can confidently select an OCR solution that meets your current needs while positioning your organization for future growth.
     `,
-    author: "James Thompson",
+    author: "Staff Writer",
     publishedDate: "2024-12-28",
     readingTime: "10 min",
     tags: ["OCR Solutions", "Business Strategy", "Technology Selection", "ROI"]
@@ -600,7 +600,7 @@ Track these metrics to measure the success of your ADP implementation:
 
 Automated document processing represents a fundamental shift in how organizations handle information. By implementing these technologies strategically, businesses can achieve significant improvements in efficiency, accuracy, and cost-effectiveness while positioning themselves for future growth and innovation.
     `,
-    author: "Dr. Amanda Foster",
+    author: "Staff Writer",
     publishedDate: "2024-12-20",
     readingTime: "12 min",
     tags: ["Automation", "Document Processing", "Business Transformation", "Workflow"]
