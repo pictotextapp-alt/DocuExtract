@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Star, Zap, Shield, CreditCard } from "lucide-react";
+import { CheckCircle, Star, Zap, Shield, Mail } from "lucide-react";
 
 interface PremiumUpgradeModalProps {
   open: boolean;
@@ -13,137 +15,53 @@ interface PremiumUpgradeModalProps {
 }
 
 export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgradeModalProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
 
-  // Handle PayPal return after payment
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Check for payment success/cancel
-    const paymentStatus = urlParams.get('payment');
-    const token = urlParams.get('token');
-    const PayerID = urlParams.get('PayerID');
-
-    console.log("PayPal return parameters:", { paymentStatus, token, PayerID });
-
-    if (paymentStatus === 'success' && token && PayerID) {
-      console.log("Processing successful PayPal payment");
-      handlePayPalReturn(token, PayerID);
-    } else if (paymentStatus === 'cancel') {
-      console.log("PayPal payment was cancelled");
+    if (!email.trim()) {
       toast({
-        title: "Payment Cancelled",
-        description: "You cancelled the payment process.",
-        variant: "default",
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive",
       });
-    } else if (token && PayerID) {
-      // Legacy support for direct PayPal redirect (without payment parameter)
-      console.log("Processing PayPal return (legacy)");
-      handlePayPalReturn(token, PayerID);
-    }
-  }, []);
-
-  const handlePayPalReturn = async (paypalOrderId: string, payerID: string) => {
-    const pendingPayment = sessionStorage.getItem('pendingPayment');
-    if (!pendingPayment) {
-      console.error("No pending payment found");
       return;
     }
 
-    const paymentData = JSON.parse(pendingPayment);
-    setIsProcessing(true);
+    setIsSubmitting(true);
 
     try {
-      console.log("Verifying PayPal payment:", { paypalOrderId, payerID, email: paymentData.email });
-
-      const response = await fetch("/api/payment/paypal", {
+      const response = await fetch("/api/premium-interest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: paymentData.email,
-          paypalOrderId: paypalOrderId,
-          payerID: payerID
-        }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       if (response.ok) {
-        sessionStorage.removeItem('pendingPayment');
+        setIsSubmitted(true);
         toast({
-          title: "Welcome to Premium!",
-          description: "Your payment was successful. Enjoy unlimited OCR processing!",
+          title: "Thank You!",
+          description: "We'll notify you when premium features are available.",
         });
-
-        // Clear URL parameters and refresh
-        window.history.replaceState({}, document.title, window.location.pathname);
-        setTimeout(() => window.location.reload(), 2000);
-
       } else {
         const errorData = await response.json();
-        console.error("Payment verification failed:", errorData);
-        throw new Error(errorData.error || "Payment verification failed");
+        throw new Error(errorData.error || "Failed to save email");
       }
 
     } catch (error) {
-      console.error("Payment verification error:", error);
+      console.error("Email submission error:", error);
       toast({
-        title: "Payment Verification Failed",
-        description: error instanceof Error ? error.message : "Please contact support if payment was deducted.",
+        title: "Submission Failed",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleUpgrade = async () => {
-    setIsProcessing(true);
-
-    try {
-      // Create PayPal order with return URLs
-      const orderResponse = await fetch("/api/paypal/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          amount: "4.99",
-          currency: "USD",
-          intent: "CAPTURE"
-        }),
-      });
-
-      if (!orderResponse.ok) {
-        throw new Error("Failed to create payment order");
-      }
-
-      const orderData = await orderResponse.json();
-      console.log("PayPal order created:", orderData);
-
-      // Find the approval URL from PayPal response
-      const approvalUrl = orderData.links?.find((link: any) => link.rel === 'approve')?.href;
-
-      if (!approvalUrl) {
-        throw new Error("PayPal approval URL not found");
-      }
-
-      // Store payment info for verification when user returns
-      sessionStorage.setItem('pendingPayment', JSON.stringify({
-        orderId: orderData.id,
-        email: user?.email || 'guest@example.com'
-      }));
-
-      // Redirect to PayPal for actual payment
-      window.location.href = approvalUrl;
-
-    } catch (error) {
-      console.error("Payment setup error:", error);
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Payment setup failed. Please try again.",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -170,7 +88,7 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
       <DialogContent className="max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            Upgrade to Premium
+            Coming Soon - Premium Features
           </DialogTitle>
         </DialogHeader>
 
@@ -178,15 +96,15 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
           <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader className="text-center pb-4">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800 px-3 py-1">
-                  Most Popular
+                <Badge variant="secondary" className="bg-orange-100 text-orange-800 px-3 py-1">
+                  Coming Soon
                 </Badge>
               </div>
-              <CardTitle className="text-3xl font-bold text-slate-800">
-                $4.99<span className="text-lg font-normal text-slate-600">/month</span>
+              <CardTitle className="text-2xl font-bold text-slate-800">
+                Premium Features
               </CardTitle>
               <p className="text-slate-600 text-sm">
-                Unlimited OCR processing for your business
+                Professional OCR with unlimited processing
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -207,34 +125,57 @@ export function PremiumUpgradeModal({ open, onOpenChange, user }: PremiumUpgrade
             </CardContent>
           </Card>
 
-          <div className="space-y-3">
-            <Button
-              onClick={handleUpgrade}
-              disabled={isProcessing}
-              className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-medium py-3"
-              data-testid="button-paypal-pay"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="w-4 h-4 mr-2 animate-spin border-2 border-white border-t-transparent rounded-full" />
-                  Processing Payment...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Pay with PayPal - $4.99
-                </>
-              )}
-            </Button>
-
-            <p className="text-xs text-slate-500 text-center">
-              By clicking "Pay with PayPal", you'll be redirected to PayPal to complete your payment securely.
-            </p>
-          </div>
+          {!isSubmitted ? (
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                  Get notified when premium features launch
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full"
+                  data-testid="input-premium-email"
+                />
+              </div>
+              
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium py-3"
+                data-testid="button-notify-me"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 animate-spin border-2 border-white border-t-transparent rounded-full" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Notify Me When Available
+                  </>
+                )}
+              </Button>
+            </form>
+          ) : (
+            <div className="text-center py-6 space-y-3">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">Thank You!</h3>
+              <p className="text-slate-600 text-sm">
+                We'll notify you as soon as premium features are available.
+              </p>
+            </div>
+          )}
 
           <div className="text-center">
             <p className="text-xs text-slate-400">
-              Cancel anytime • Secure payments • Money-back guarantee
+              Join the waitlist • Be the first to know • No spam
             </p>
           </div>
         </div>

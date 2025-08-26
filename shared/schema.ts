@@ -68,19 +68,13 @@ export const usageLogs = pgTable("usage_logs", {
   dateIdx: index("usage_logs_date_idx").on(table.imageProcessed),
 }));
 
-// PayPal payment records
-export const payments = pgTable("payments", {
+// Premium interest collection for future launch
+export const premiumInterest = pgTable("premium_interest", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull(),
-  paypalOrderId: text("paypal_order_id").unique().notNull(),
-  amount: text("amount").notNull(), // Store as string for precision
-  currency: text("currency").default("USD").notNull(),
-  status: text("status", { enum: ["pending", "completed", "failed"] }).default("pending").notNull(),
+  email: text("email").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (table) => ({
-  emailIdx: index("payments_email_idx").on(table.email),
-  paypalIdx: index("payments_paypal_idx").on(table.paypalOrderId),
+  emailIdx: index("premium_interest_email_idx").on(table.email),
 }));
 
 // Insert schemas
@@ -111,7 +105,7 @@ export const insertUsageLogSchema = createInsertSchema(usageLogs).omit({
   imageProcessed: true,
 });
 
-export const insertPaymentSchema = createInsertSchema(payments).omit({
+export const insertPremiumInterestSchema = createInsertSchema(premiumInterest).omit({
   id: true,
   createdAt: true,
 });
@@ -123,7 +117,7 @@ export const selectUserSchema = createSelectSchema(users).omit({
 });
 export const selectFreeUsageSchema = createSelectSchema(freeUsage);
 export const selectUsageLogSchema = createSelectSchema(usageLogs);
-export const selectPaymentSchema = createSelectSchema(payments);
+export const selectPremiumInterestSchema = createSelectSchema(premiumInterest);
 
 // Types
 export type PremiumUser = typeof premiumUsers.$inferSelect;
@@ -139,8 +133,8 @@ export type NewFreeUsage = z.infer<typeof insertFreeUsageSchema>;
 export type UsageLog = typeof usageLogs.$inferSelect;
 export type NewUsageLog = z.infer<typeof insertUsageLogSchema>;
 
-export type Payment = typeof payments.$inferSelect;
-export type NewPayment = z.infer<typeof insertPaymentSchema>;
+export type PremiumInterest = typeof premiumInterest.$inferSelect;
+export type NewPremiumInterest = z.infer<typeof insertPremiumInterestSchema>;
 
 // Login schema - only for premium users
 export const loginSchema = z.object({
@@ -150,16 +144,12 @@ export const loginSchema = z.object({
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
 
-// PayPal payment schema
-export const paypalPaymentSchema = z.object({
-  email: z.string().email("Valid email is required"),
-  amount: z.string().regex(/^\d+\.\d{2}$/, "Amount must be in format 0.00").optional(),
-  currency: z.string().default("USD").optional(),
-  paypalOrderId: z.string().min(1, "PayPal Order ID is required"),
-  payerID: z.string().optional(),
+// Premium interest email schema
+export const premiumInterestEmailSchema = z.object({
+  email: z.string().email("Valid email is required")
 });
 
-export type PayPalPaymentData = z.infer<typeof paypalPaymentSchema>;
+export type PremiumInterestEmail = z.infer<typeof premiumInterestEmailSchema>;
 
 // OCR result schema
 export const ocrResultSchema = z.object({

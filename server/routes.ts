@@ -7,9 +7,8 @@ import { freeUsageService } from "./free-usage-service";
 import { premiumService } from "./premium-service";
 // Removed old usage tracking imports - now using new tier system
 import { OCRService } from "./ocr-service";
-import { insertUserSchema, loginSchema, paypalPaymentSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema } from "@shared/schema";
 import "./oauth-config"; // Initialize passport strategies
-import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -26,53 +25,8 @@ try {
   console.warn("OCR Service not initialized:", error);
 }
 
-// PayPal verification function
-async function verifyPayPalPayment(orderId: string) {
-  const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-  const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
-  // Use sandbox for development, live for production
-  const PAYPAL_BASE_URL = process.env.NODE_ENV === "production" 
-    ? "https://api-m.paypal.com" 
-    : "https://api-m.sandbox.paypal.com";
-
-  if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
-    throw new Error("PayPal credentials not configured");
-  }
-
-  // Get PayPal access token
-  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
-
-  const tokenResponse = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials'
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error(`PayPal token request failed: ${tokenResponse.status}`);
-  }
-
-  const tokenData = await tokenResponse.json();
-  const accessToken = tokenData.access_token;
-
-  // Verify the order
-  const orderResponse = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    }
-  });
-
-  if (!orderResponse.ok) {
-    throw new Error(`PayPal API error: ${orderResponse.status}`);
-  }
-
-  return await orderResponse.json();
-}
+// Email collection for premium interest
+const premiumInterestEmails = new Set<string>();
 
 // Premium authentication middleware - only premium users can log in
 async function requirePremiumAuth(req: any, res: any, next: any) {
@@ -91,99 +45,29 @@ async function requirePremiumAuth(req: any, res: any, next: any) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
-  // PayPal payment endpoint - MUST be called before registration
-  app.post("/api/payment/paypal", async (req, res) => {
+  // Premium interest email collection
+  app.post("/api/premium-interest", async (req, res) => {
     try {
-      console.log("PayPal payment request body:", req.body);
-      const paymentData = paypalPaymentSchema.parse(req.body);
-      console.log("Parsed payment data:", paymentData);
+      const emailSchema = z.object({
+        email: z.string().email("Valid email is required")
+      });
+      
+      const { email } = emailSchema.parse(req.body);
+      
+      // Add email to interest list
+      premiumInterestEmails.add(email.toLowerCase());
+      
+      console.log(`Added email to premium interest list: ${email}`);
+      console.log(`Total interested users: ${premiumInterestEmails.size}`);
 
-      // Verify payment with PayPal API
-      try {
-        console.log("Verifying PayPal order:", paymentData.paypalOrderId);
-        const paypalVerification = await verifyPayPalPayment(paymentData.paypalOrderId);
-        console.log("PayPal verification result:", paypalVerification);
-
-        if (paypalVerification.status !== 'APPROVED' && paypalVerification.status !== 'COMPLETED') {
-          return res.status(400).json({ 
-            error: "Payment not approved or completed",
-            status: paypalVerification.status,
-            details: "Payment must be approved by user before verification"
-          });
-        }
-
-        // Verify payment amount (optional but recommended)
-        const expectedAmount = "4.99"; // Your premium price - adjust as needed
-        const paidAmount = paypalVerification.purchase_units[0].amount.value;
-
-        if (parseFloat(paidAmount) < parseFloat(expectedAmount)) {
-          return res.status(400).json({ 
-            error: "Payment amount insufficient",
-            expected: expectedAmount,
-            received: paidAmount 
-          });
-        }
-
-        console.log(`Payment verified: ${paymentData.email} paid ${paidAmount}`);
-
-      } catch (verificationError: any) {
-        console.error("PayPal verification failed:", verificationError);
-        return res.status(400).json({ 
-          error: "PayPal payment verification failed",
-          details: verificationError.message 
-        });
-      }
-
-      // Use the real PayPal order ID (not fake one)
-      const paypalOrderId = paymentData.paypalOrderId;
-
-      // Add user to premium list after verified payment
-      await premiumService.addPremiumUser(paymentData.email, paypalOrderId);
-
-      // Check if there's pending registration data for this email
-      const pendingRegistration = (req as any).session.pendingRegistration;
-      if (pendingRegistration && pendingRegistration.email === paymentData.email) {
-        // Create the user account immediately after successful payment
-        try {
-          const user = await premiumService.createUser({
-            username: pendingRegistration.username,
-            email: pendingRegistration.email,
-            password: pendingRegistration.password
-          });
-
-          // Clear pending registration data
-          delete (req as any).session.pendingRegistration;
-
-          console.log(`User account created after payment: ${user.email}`);
-
-          res.json({
-            success: true,
-            message: "Payment successful and account created! You can now sign in.",
-            paypalOrderId: paypalOrderId,
-            accountCreated: true
-          });
-        } catch (userCreationError: any) {
-          console.error("User creation error after payment:", userCreationError);
-          // Payment succeeded but user creation failed
-          res.json({
-            success: true,
-            message: "Payment successful! Please try registering again.",
-            paypalOrderId: paypalOrderId,
-            accountCreated: false,
-            error: userCreationError.message
-          });
-        }
-      } else {
-        res.json({
-          success: true,
-          message: "Payment successful! You can now create your account.",
-          paypalOrderId: paypalOrderId
-        });
-      }
+      res.json({
+        success: true,
+        message: "Thank you for your interest! We'll notify you when premium features are available."
+      });
     } catch (error: any) {
-      console.error("PayPal payment error:", error);
+      console.error("Premium interest error:", error);
       res.status(400).json({ 
-        error: error.message || "Payment processing failed" 
+        error: error.message || "Failed to save email" 
       });
     }
   });
@@ -397,19 +281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PayPal integration endpoints
-  app.get("/api/paypal/setup", async (req, res) => {
-    await loadPaypalDefault(req, res);
-  });
+  // Premium interest endpoint (PayPal integration removed)
 
-  app.post("/api/paypal/order", async (req, res) => {
-    // Request body should contain: { intent, amount, currency }
-    await createPaypalOrder(req, res);
-  });
-
-  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
-    await capturePaypalOrder(req, res);
-  });
 
   // Google OAuth routes
   app.get("/api/auth/google", 

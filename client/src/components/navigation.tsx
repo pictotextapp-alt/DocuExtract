@@ -139,7 +139,7 @@ const Navigation = () => {
                             data-testid="menu-upgrade"
                           >
                             <Zap className="w-4 h-4 mr-2" />
-                            Upgrade to Premium
+                            Coming Soon - Premium Features
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem 
