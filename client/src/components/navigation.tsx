@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth, useUsage } from "@/hooks/useAuth";
 import { AuthModal } from "./auth-modal";
 import { PremiumUpgradeModal } from "./premium-upgrade-modal";
+import { ComingSoonModal } from "./coming-soon-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -22,6 +23,7 @@ const Navigation = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [comingSoonModalOpen, setComingSoonModalOpen] = useState(false);
   
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const { data: usage } = useUsage();
@@ -135,7 +137,7 @@ const Navigation = () => {
                         <DropdownMenuSeparator />
                         {!user.isPremium && (
                           <DropdownMenuItem 
-                            onClick={() => setUpgradeModalOpen(true)}
+                            onClick={() => setComingSoonModalOpen(true)}
                             data-testid="menu-upgrade"
                           >
                             <Zap className="w-4 h-4 mr-2" />
@@ -156,7 +158,7 @@ const Navigation = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => setAuthModalOpen(true)}
+                    onClick={() => setComingSoonModalOpen(true)}
                     data-testid="button-sign-in"
                   >
                     <User className="w-4 h-4 mr-2" />
@@ -198,9 +200,15 @@ const Navigation = () => {
 
       {/* Premium Upgrade Modal */}
       <PremiumUpgradeModal
-        isOpen={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        currentUsage={usage}
+        open={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        user={user}
+      />
+
+      {/* Coming Soon Modal */}
+      <ComingSoonModal
+        open={comingSoonModalOpen}
+        onOpenChange={setComingSoonModalOpen}
       />
     </nav>
   );

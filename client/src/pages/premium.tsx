@@ -56,6 +56,11 @@ export default function Premium() {
           </h1>
         </div>
         <p className="text-xl text-slate-600 max-w-2xl mx-auto">Unlock 1500 OCR extractions per month and professional features for serious users</p>
+        <div className="mt-8">
+          <Badge className="bg-orange-100 text-orange-800 text-lg px-6 py-2">
+            Coming Soon
+          </Badge>
+        </div>
       </div>
       {/* Current Status */}
       {isAuthenticated && (
@@ -95,71 +100,32 @@ export default function Premium() {
           </CardContent>
         </Card>
       )}
-      {/* Pricing Card */}
+      {/* Coming Soon Card */}
       <div className="max-w-md mx-auto mb-12">
-        <Card className="border-2 border-amber-200 shadow-lg">
+        <Card className="border-2 border-orange-200 shadow-lg">
           <CardHeader className="text-center pb-2">
             <div className="flex items-center justify-center mb-2">
-              <Crown className="h-8 w-8 text-amber-500" />
+              <Crown className="h-8 w-8 text-orange-500" />
             </div>
             <CardTitle className="text-2xl">Premium Plan</CardTitle>
-            <div className="text-4xl font-bold text-amber-600 mt-2">
-              $4.99
-              <span className="text-lg font-normal text-slate-500">/month</span>
+            <div className="text-3xl font-bold text-orange-600 mt-2">
+              Coming Soon
             </div>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="text-center mb-6">
-              {!isAuthenticated ? (
-                <div className="space-y-4">
-                  <p className="text-slate-600 mb-4">Sign in to upgrade to Premium</p>
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthModalOpen(true);
-                      }}
-                      variant="outline" 
-                      className="flex-1"
-                      data-testid="button-signin"
-                    >
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Sign In
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        setAuthMode("register");
-                        setAuthModalOpen(true);
-                      }}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                      data-testid="button-register"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Register
-                    </Button>
-                  </div>
-                </div>
-              ) : user?.isPremium ? (
-                <div className="text-center">
-                  <Badge className="bg-gradient-to-r from-green-400 to-green-600 text-white mb-2">
-                    <Check className="w-3 h-3 mr-1" />
-                    Active
-                  </Badge>
-                  <p className="text-slate-600">You're already a Premium member!</p>
-                </div>
-              ) : (
-                <Button 
-                  onClick={() => setUpgradeModalOpen(true)}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-3 text-lg"
-                  data-testid="button-upgrade-main"
-                >
-                  <Crown className="w-5 h-5 mr-2" />
-                  Get Premium Now
-                </Button>
-              )}
+              <p className="text-slate-600 mb-6">Premium features are currently in development. We'll notify you when they become available.</p>
+              
+              <Button 
+                onClick={() => setUpgradeModalOpen(true)}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                data-testid="button-coming-soon"
+              >
+                Get Notified When Available
+              </Button>
             </div>
             <div className="text-sm text-slate-500 text-center">
-              Cancel anytime • Secure payment via PayPal
+              Be the first to access premium features
             </div>
           </CardContent>
         </Card>
