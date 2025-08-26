@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navigation from "@/components/navigation";
+import { HeaderAdBanner } from "@/components/header-ad-banner";
 import Home from "@/pages/home";
 import Settings from "@/pages/settings";
 import Premium from "@/pages/premium";
@@ -37,6 +38,7 @@ function App() {
         <TooltipProvider>
           <div className="min-h-screen bg-slate-50">
             <Navigation />
+            <HeaderAdBanner />
             <Router />
           </div>
           <Toaster />

@@ -11,6 +11,7 @@ import { useAuth, useUsage } from "@/hooks/useAuth";
 import { AuthModal } from "./auth-modal";
 import { PaymentModal } from "./payment-modal";
 import { PremiumUpgradeModal } from "./premium-upgrade-modal";
+import { AdContainer } from "./ad-container";
 import { 
   Upload, 
   FileImage, 
@@ -534,6 +535,22 @@ export default function SimpleTextExtractor() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* In-content Ad Space - shown after results */}
+          {result && extractedText && (
+            <div className="my-6">
+              <AdContainer 
+                size="banner" 
+                label="Sponsored Content"
+                className="hidden md:block"
+              />
+              <AdContainer 
+                size="mobile-banner" 
+                label="Sponsored Content"
+                className="block md:hidden"
+              />
+            </div>
           )}
           
           {/* Usage Warning for Non-Premium Users */}

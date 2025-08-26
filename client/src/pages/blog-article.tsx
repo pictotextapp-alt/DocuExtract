@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, User, Calendar, ArrowLeft, ArrowRight, Home } from "lucide-react";
 import { blogArticles } from "@/data/blog-articles";
-import ReactMarkdown from "react-markdown";
+import { AdContainer } from "@/components/ad-container";
+import { ArticleContent } from "@/components/article-content";
 
 export default function BlogArticle() {
   const { slug } = useParams<{ slug: string }>();
@@ -86,12 +87,24 @@ export default function BlogArticle() {
         </p>
       </header>
 
+      {/* Top Article Ad Space */}
+      <div className="mb-8">
+        <AdContainer 
+          size="banner" 
+          label="Sponsored Content"
+          className="hidden md:block"
+        />
+        <AdContainer 
+          size="mobile-banner" 
+          label="Sponsored Content"
+          className="block md:hidden"
+        />
+      </div>
+
       {/* Article Content */}
       <Card className="mb-12">
         <CardContent className="p-8">
-          <div className="prose prose-slate max-w-none prose-headings:text-slate-800 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-800 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
-            <ReactMarkdown>{article.content}</ReactMarkdown>
-          </div>
+          <ArticleContent content={article.content} />
         </CardContent>
       </Card>
 

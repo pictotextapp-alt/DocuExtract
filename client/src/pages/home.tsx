@@ -1,10 +1,14 @@
 import SimpleTextExtractor from "@/components/simple-text-extractor";
 import Footer from "@/components/footer";
+import { AdContainer } from "@/components/ad-container";
 
 const Home = () => {
   return (
     <div className="animate-fade-in">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content */}
+          <div className="flex-1">
         {/* Hero Section */}
       <div className="text-center mb-12">
         <div className="flex items-center justify-center mb-8">
@@ -40,14 +44,28 @@ const Home = () => {
         </p>
       </div>
 
-      {/* Simple Text Extractor Component */}
-      <div className="mb-16">
-        <SimpleTextExtractor />
-      </div>
+            {/* Simple Text Extractor Component */}
+            <div className="mb-16">
+              <SimpleTextExtractor />
+            </div>
 
-      {/* Features Grid */}
-      <div className="grid md:grid-cols-3 gap-8 mb-16">
-        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
+            {/* In-content Ad Space */}
+            <div className="mb-12">
+              <AdContainer 
+                size="banner" 
+                label="Sponsored Content"
+                className="hidden md:block"
+              />
+              <AdContainer 
+                size="mobile-banner" 
+                label="Sponsored Content"
+                className="block md:hidden"
+              />
+            </div>
+
+            {/* Features Grid */}
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-8">
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
             <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -76,19 +94,19 @@ const Home = () => {
           </div>
           <h3 className="text-xl font-semibold text-slate-900 mb-4">Professional Quality</h3>
           <p className="text-slate-600">Context-aware text extraction with intelligent filtering to remove UI noise and preserve meaningful content.</p>
-        </div>
-      </div>
+              </div>
+            </div>
 
-      {/* Enhanced Features Section */}
-      <div className="bg-white py-16">
-        <div className="text-center mb-12">
+            {/* Enhanced Features Section */}
+            <div className="bg-white py-16">
+              <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Built for Modern Workflows</h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Professional OCR technology with comprehensive features for all your text extraction needs
           </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-8">
           <div className="text-center p-6">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,13 +142,13 @@ const Home = () => {
               Recognize text in multiple languages including English, Spanish, French, German, and more
             </p>
           </div>
-        </div>
-      </div>
+              </div>
+            </div>
 
-      {/* Stats Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-12 text-white text-center">
-        <h2 className="text-3xl font-bold mb-8">Proven Performance</h2>
-        <div className="grid md:grid-cols-3 gap-8">
+            {/* Stats Section */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-12 text-white text-center">
+              <h2 className="text-3xl font-bold mb-8">Proven Performance</h2>
+              <div className="grid md:grid-cols-3 gap-8">
           <div>
             <div className="text-4xl font-bold mb-2" data-testid="stat-accuracy">95%+</div>
             <div className="text-blue-100">Average Confidence</div>
@@ -141,12 +159,60 @@ const Home = () => {
           </div>
           <div>
             <div className="text-4xl font-bold mb-2" data-testid="stat-processing">Under 5s</div>
-            <div className="text-blue-100">Processing Time</div>
+                  <div className="text-blue-100">Processing Time</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar with Ad Space */}
+          <div className="lg:w-80 hidden lg:block">
+            <div className="sticky top-24 space-y-6">
+              {/* Sidebar Ad */}
+              <AdContainer 
+                size="rectangle" 
+                label="Advertisement"
+              />
+              
+              {/* Additional sidebar content */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-semibold text-slate-900 mb-4">Quick Tips</h3>
+                <ul className="space-y-3 text-sm text-slate-600">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    Use high-resolution images for better accuracy
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    Ensure good lighting and contrast
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    Crop images to focus on text areas
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
       </main>
       
+      {/* Footer Ad Space */}
+      <div className="bg-white border-t border-slate-200 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AdContainer 
+            size="banner" 
+            label="Advertisement"
+            className="hidden md:block"
+          />
+          <AdContainer 
+            size="mobile-banner" 
+            label="Advertisement"
+            className="block md:hidden"
+          />
+        </div>
+      </div>
+
       {/* Footer */}
       <Footer />
     </div>
