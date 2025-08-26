@@ -9,6 +9,7 @@ import { premiumService } from "./premium-service";
 import { OCRService } from "./ocr-service";
 import { insertUserSchema, loginSchema } from "@shared/schema";
 import "./oauth-config"; // Initialize passport strategies
+import { generateSitemap } from "./sitemap";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -44,6 +45,18 @@ async function requirePremiumAuth(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // SEO endpoints
+  app.get("/sitemap.xml", generateSitemap);
+  app.get("/robots.txt", (req, res) => {
+    res.type('text/plain');
+    res.send(`User-agent: *
+Allow: /
+
+Sitemap: ${req.protocol}://${req.get('host')}/sitemap.xml
+
+Crawl-delay: 1`);
+  });
+
   // Authentication endpoints
   // Premium interest email collection
   app.post("/api/premium-interest", async (req, res) => {
