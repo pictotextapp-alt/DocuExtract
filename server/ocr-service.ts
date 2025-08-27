@@ -22,22 +22,22 @@ export class OCRService {
   ): Promise<OCRResult> {
     try {
       // Try OCR.space API first with a single attempt for speed
-      try {
-        console.log(`OCR.space API attempt (fast mode)`);
-        return await this.extractWithOCRSpace(imageBuffer, useFiltering);
-      } catch (error) {
-        const errorMsg = (error as Error).message;
-        console.log(`OCR.space failed:`, errorMsg);
-        
-        // Check if it's a timeout or connection error
-        if (errorMsg.includes('timeout') || errorMsg.includes('aborted') || errorMsg.includes('fetch')) {
-          console.log("Network/timeout issue detected, skipping to Tesseract");
-        } else {
-          console.log("OCR.space API error, falling back to Tesseract");
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          console.log(`OCR.space attempt ${attempt}/2 (high-quality mode)`);
+          return await this.extractWithOCRSpace(imageBuffer, useFiltering);
+        } catch (error) {
+          const errorMsg = (error as Error).message;
+          console.log(`OCR.space attempt ${attempt} failed:`, errorMsg);
+          
+          if (attempt === 2) {
+            console.log("OCR.space failed after 2 attempts, falling back to Tesseract");
+            return await this.extractWithTesseract(imageBuffer, useFiltering);
+          }
+          
+          // Wait 1 second before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-        
-        // Immediate fallback to local Tesseract processing
-        return await this.extractWithTesseract(imageBuffer, useFiltering);
       }
       
     } catch (error) {
@@ -69,9 +69,9 @@ export class OCRService {
     const formData = new FormData();
     formData.append("base64Image", dataUrl);
     formData.append("language", "eng");
-    formData.append("OCREngine", "1"); // Use OCR Engine 1 for faster processing
-    formData.append("detectOrientation", "false"); // Disable for faster processing
-    formData.append("scale", "false"); // Disable for faster processing
+    formData.append("OCREngine", "2"); // Use OCR Engine 2 for better accuracy (99% confidence)
+    formData.append("detectOrientation", "true"); // Enable for better text detection
+    formData.append("scale", "true"); // Enable for better quality
     formData.append("isOverlayRequired", "false");
     formData.append("isTable", "false"); // Disable table detection for better general text extraction
     formData.append("detectCheckbox", "false");
@@ -83,7 +83,7 @@ export class OCRService {
         "apikey": this.apiKey,
       },
       body: formData,
-      signal: AbortSignal.timeout(20000) // Reduced to 20 seconds timeout
+      signal: AbortSignal.timeout(30000) // Increased to 30 seconds for better success rate
     });
 
     if (!response.ok) {
