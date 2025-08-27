@@ -7,6 +7,21 @@ export const onRequest = async (context) => {
   try {
     // Get the API path (everything after /api/)
     const url = new URL(request.url);
+    // ADD SITEMAP HANDLING HERE - BEFORE apiPath line
+    if (url.pathname === '/sitemap.xml') {
+      const sitemapResponse = await fetch(`${REPLIT_BACKEND}/sitemap.xml`);
+      if (sitemapResponse.ok) {
+        const sitemapContent = await sitemapResponse.text();
+        return new Response(sitemapContent, {
+          headers: {
+            'Content-Type': 'application/xml',
+            'Cache-Control': 'public, max-age=3600'
+          }
+        });
+      }
+      return new Response('Sitemap not found', { status: 404 });
+    }
+    
     const apiPath = url.pathname + url.search;
     
     // Create target URL for Replit
