@@ -1,4 +1,7 @@
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { Link } from "wouter";
 import { AdContainer } from "./ad-container";
 
 interface ArticleContentProps {
@@ -23,8 +26,32 @@ export function ArticleContent({ content }: ArticleContentProps) {
   const afterAd = contentLines.slice(insertPoint).join('\n');
 
   return (
-    <div className="prose prose-slate max-w-none prose-headings:text-slate-800 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-800 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
-      <ReactMarkdown>{beforeAd}</ReactMarkdown>
+    <div className="prose prose-slate max-w-none prose-headings:text-slate-800 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-800 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
+      <ReactMarkdown 
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        components={{
+          a: ({ href, children, ...props }) => {
+            // Handle internal links with wouter Link component
+            if (href?.startsWith('/')) {
+              return (
+                <Link href={href} {...props}>
+                  <span className="text-blue-600 hover:underline cursor-pointer">
+                    {children}
+                  </span>
+                </Link>
+              );
+            }
+            // External links open in new tab
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                {children}
+              </a>
+            );
+          }
+        }}
+      >
+        {beforeAd}
+      </ReactMarkdown>
       
       {/* Middle Article Ad */}
       <div className="not-prose my-8">
@@ -40,7 +67,31 @@ export function ArticleContent({ content }: ArticleContentProps) {
         />
       </div>
       
-      <ReactMarkdown>{afterAd}</ReactMarkdown>
+      <ReactMarkdown 
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        components={{
+          a: ({ href, children, ...props }) => {
+            // Handle internal links with wouter Link component
+            if (href?.startsWith('/')) {
+              return (
+                <Link href={href} {...props}>
+                  <span className="text-blue-600 hover:underline cursor-pointer">
+                    {children}
+                  </span>
+                </Link>
+              );
+            }
+            // External links open in new tab
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                {children}
+              </a>
+            );
+          }
+        }}
+      >
+        {afterAd}
+      </ReactMarkdown>
     </div>
   );
 }
