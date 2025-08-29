@@ -3,17 +3,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, User, Calendar, ArrowLeft, ArrowRight, Home } from "lucide-react";
-import { blogArticles } from "@/data/blog-articles";
+import { useQuery } from "@tanstack/react-query";
+import { BlogArticle } from "@/data/blog-articles";
 import { AdContainer } from "@/components/ad-container";
 import { ArticleContent } from "@/components/article-content";
 import { SchemaMarkup } from "@/components/schema-markup";
 
-export default function BlogArticle() {
+export default function BlogArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   
-  const article = blogArticles.find(a => a.slug === slug);
-  
-  if (!article) {
+  const { data: article, isLoading, error } = useQuery({
+    queryKey: ['/api/blog/articles', slug],
+    queryFn: () => fetch(`/api/blog/articles/${slug}`).then(res => {
+      if (!res.ok) throw new Error('Article not found');
+      return res.json();
+    }),
+    enabled: !!slug
+  });
+
+  const { data: allArticlesData } = useQuery({
+    queryKey: ['/api/blog/articles'],
+    queryFn: () => fetch('/api/blog/articles').then(res => res.json())
+  });
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-4xl text-center">
+        <div className="animate-pulse space-y-4">
+          <div className="bg-slate-200 h-8 w-3/4 mx-auto rounded"></div>
+          <div className="bg-slate-200 h-64 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !article) {
     return (
       <div className="container mx-auto py-12 px-4 max-w-4xl text-center">
         <h1 className="text-4xl font-bold text-slate-800 mb-4">Article Not Found</h1>
@@ -31,7 +55,8 @@ export default function BlogArticle() {
   }
 
   // Find related articles (same tags, excluding current)
-  const relatedArticles = blogArticles
+  const allArticles: BlogArticle[] = allArticlesData?.articles || [];
+  const relatedArticles = allArticles
     .filter(a => a.id !== article.id && a.tags.some(tag => article.tags.includes(tag)))
     .slice(0, 3);
 

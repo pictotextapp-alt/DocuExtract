@@ -2,10 +2,42 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Calendar, ArrowRight } from "lucide-react";
-import { blogArticles } from "@/data/blog-articles";
+import { useQuery } from "@tanstack/react-query";
+import { BlogArticle } from "@/data/blog-articles";
 import { SchemaMarkup } from "@/components/schema-markup";
 
 export default function Blog() {
+  const { data: articlesData, isLoading, error } = useQuery({
+    queryKey: ['/api/blog/articles'],
+    queryFn: () => fetch('/api/blog/articles').then(res => res.json())
+  });
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-6xl">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-slate-800 mb-4">Loading Blog...</h1>
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-slate-200 h-32 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !articlesData) {
+    return (
+      <div className="container mx-auto py-12 px-4 max-w-6xl text-center">
+        <h1 className="text-4xl font-bold text-slate-800 mb-4">Blog Unavailable</h1>
+        <p className="text-xl text-slate-600">Unable to load blog articles. Please try again later.</p>
+      </div>
+    );
+  }
+
+  const blogArticles: BlogArticle[] = articlesData.articles || [];
+
   return (
     <div className="container mx-auto py-12 px-4 max-w-6xl">
       <SchemaMarkup type="blog" />

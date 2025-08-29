@@ -7,6 +7,7 @@ import { freeUsageService } from "./free-usage-service";
 import { premiumService } from "./premium-service";
 // Removed old usage tracking imports - now using new tier system
 import { OCRService } from "./ocr-service";
+import { blogService } from "./blog-service";
 import { insertUserSchema, loginSchema } from "@shared/schema";
 import "./oauth-config"; // Initialize passport strategies
 import { generateSitemap } from "./sitemap";
@@ -337,6 +338,91 @@ Crawl-delay: 1`);
   app.post("/api/logout", (req, res) => {
     (req as any).session.destroy();
     res.json({ success: true });
+  });
+
+  // Blog API endpoints
+  app.get("/api/blog/articles", (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const tag = req.query.tag as string;
+      const search = req.query.search as string;
+
+      let articles;
+      
+      if (tag) {
+        articles = blogService.getArticlesByTag(tag);
+        // Apply pagination to filtered results
+        const total = articles.length;
+        const totalPages = Math.ceil(total / limit);
+        const startIndex = (page - 1) * limit;
+        const paginatedArticles = articles.slice(startIndex, startIndex + limit);
+        
+        res.json({
+          articles: paginatedArticles,
+          total,
+          page,
+          totalPages
+        });
+      } else if (search) {
+        articles = blogService.searchArticles(search);
+        // Apply pagination to search results
+        const total = articles.length;
+        const totalPages = Math.ceil(total / limit);
+        const startIndex = (page - 1) * limit;
+        const paginatedArticles = articles.slice(startIndex, startIndex + limit);
+        
+        res.json({
+          articles: paginatedArticles,
+          total,
+          page,
+          totalPages,
+          query: search
+        });
+      } else {
+        const result = blogService.getArticlesPaginated(page, limit);
+        res.json(result);
+      }
+    } catch (error) {
+      console.error("Error fetching blog articles:", error);
+      res.status(500).json({ error: "Failed to fetch articles" });
+    }
+  });
+
+  app.get("/api/blog/articles/:slug", (req, res) => {
+    try {
+      const article = blogService.getArticleBySlug(req.params.slug);
+      
+      if (!article) {
+        return res.status(404).json({ error: "Article not found" });
+      }
+      
+      res.json(article);
+    } catch (error) {
+      console.error("Error fetching blog article:", error);
+      res.status(500).json({ error: "Failed to fetch article" });
+    }
+  });
+
+  app.get("/api/blog/tags", (req, res) => {
+    try {
+      const tags = blogService.getAllTags();
+      res.json(tags);
+    } catch (error) {
+      console.error("Error fetching blog tags:", error);
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  // Refresh blog cache endpoint (useful for development)
+  app.post("/api/blog/refresh", (req, res) => {
+    try {
+      blogService.refreshCache();
+      res.json({ message: "Blog cache refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing blog cache:", error);
+      res.status(500).json({ error: "Failed to refresh cache" });
+    }
   });
 
   // Return the HTTP server without listening (index.ts handles the listening)

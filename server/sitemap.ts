@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { blogArticles } from '../client/src/data/blog-articles.js';
+import { blogService } from './blog-service';
 
 export function generateSitemap(req: Request, res: Response) {
   const baseUrl = `${req.protocol}://${req.get('host')}`; // Dynamic base URL
@@ -51,6 +51,7 @@ export function generateSitemap(req: Request, res: Response) {
   ];
 
   // Generate blog post URLs
+  const blogArticles = blogService.getAllArticles();
   const blogPosts = blogArticles.map(article => ({
     url: `/blog/${article.slug}`,
     lastmod: article.publishedDate,
