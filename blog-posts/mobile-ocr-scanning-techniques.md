@@ -10,7 +10,7 @@ tags: ["Mobile OCR", "Scanning", "Photography", "Productivity"]
 
 # Mobile OCR: Advanced Scanning Techniques for Perfect Text Capture
 
-Mobile OCR has transformed smartphones into powerful document scanners, enabling instant text extraction from virtually any printed material. However, achieving professional-quality results requires understanding proper scanning techniques and optimization strategies.
+Mobile OCR has transformed smartphones into powerful document scanners, enabling instant text extraction from virtually any printed material. However, achieving professional-quality <a href="/blog/image-to-text-the-complete-guide">image to text</a> results requires understanding proper scanning techniques and optimization strategies.
 
 ## Understanding Mobile OCR Capabilities
 
