@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://pictotext.com/sitemap.xml
+Sitemap: https://pictotext.app/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1
