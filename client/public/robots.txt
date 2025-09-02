@@ -1,0 +1,13 @@
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://pictotext.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Disallow admin areas if they exist
+# Disallow: /admin/
+# Disallow: /api/
